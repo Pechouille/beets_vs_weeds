@@ -11,6 +11,10 @@ cd beets_vs_weeds
 bash ./install-hooks.sh
 ```
 
+### Branch Nomenclature
+`FEAT_` : New features
+`FIX_`: Bug Fix
+
 ## 🧠 Authors
 - [Timothée Van Belle](https://github.com/TimVanBelle)
 - [Nestor Knoops](https://github.com/Nestrow42)
