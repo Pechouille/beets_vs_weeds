@@ -1,4 +1,4 @@
-# Beets VS Weeds
+# 🌰🌱 Beets VS Weeds
 
 [![Kaggle](https://img.shields.io/badge/Kaggle-20BEFF?style=for-the-badge&logo=Kaggle&logoColor=white)](https://www.kaggle.com/datasets/amiranmkrtchyan/amiran)
 
