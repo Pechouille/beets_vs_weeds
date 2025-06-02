@@ -1,4 +1,9 @@
-# beets_vs_weeds
+# Beets VS Weeds
+
+## Goal :
 Détection vidéo d'adventices dans le cadre de la culture de la Betterave
 
-QuentinRam
+## 🧠 Authors
+- [Timothée Van Belle](https://github.com/TimVanBelle)
+- [Nestor Knoops](https://github.com/Nestrow42)
+- [Quentin Ramoisiaux](https://github.com/QuentinRam)
