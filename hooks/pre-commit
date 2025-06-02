@@ -1,5 +1,4 @@
 #!/bin/sh
-# .git/hooks/pre-commit
 
 # Return name of current branch
 branch=$(git rev-parse --abbrev-ref HEAD)
