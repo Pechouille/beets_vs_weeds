@@ -45,10 +45,7 @@ def train_model(model,
         patience=20,
         validation_data=None,
         validation_split=0.3):
-
-    model = initialize_model()
     es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
-    model = compile_model(model)
     history = model.fit(X, y,
                         epochs = 100,
                         batch_size = batch_size,
@@ -79,10 +76,5 @@ def evaluate_model(
         # callbacks=None,
         return_dict=True
     )
-
-    loss = metrics["loss"]
-    mae = metrics["mae"]
-
-    print(f"✅ Model evaluated, MAE: {round(mae, 2)}")
-
+    
     return metrics
