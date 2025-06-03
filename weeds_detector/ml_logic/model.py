@@ -1,5 +1,4 @@
-from tensorflow import keras
-from tensorflow import Sequential, Input, layers, callbacks
+from tensorflow.keras import Sequential, Input, layers, callbacks
 import numpy as np
 
 def initialize_model():

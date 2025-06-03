@@ -1,5 +1,3 @@
-from weeds_detector.params import *
-
 from PIL import Image
 
 import os
@@ -14,7 +12,7 @@ from weeds_detector.utils.padding import expand2square
 def preprocess_features(X, output_folder):
     # X est le folder où se trouvent les images à traiter
     # Output folder est le folder où rajouter les images traitées
-    
+
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
@@ -32,8 +30,8 @@ def preprocess_features(X, output_folder):
         tensor = transf.permute(1, 2, 0)
         list_of_tensors.append(tensor)
 
-    X_train = np.array([tensor.numpy() for tensor in list_of_tensors])
-    X_train = X_train / 255
+    X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
+    X_prepro = X_prepro / 255
 
     y = np.zeros(1000)
     i = -1
@@ -41,6 +39,6 @@ def preprocess_features(X, output_folder):
         i += 1
         if image_name[-5] == '1':
             y[i] = 1
-    y_train = pd.Series(y)
+    y = pd.Series(y)
 
-    return X_train, y_train
+    return X_prepro, y
