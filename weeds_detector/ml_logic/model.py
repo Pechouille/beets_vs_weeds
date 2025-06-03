@@ -56,3 +56,33 @@ def train_model(model,
                         validation_split = validation_split,
                         callbacks=[es])
     return model, history
+
+def evaluate_model(
+        model,
+        X: np.ndarray,
+        y: np.ndarray,
+        batch_size=64):
+    """
+    Evaluate trained model performance on the dataset
+    """
+
+    if model is None:
+        print(f"\n❌ No model to evaluate")
+        return None
+
+    print(X.shape, y.shape)
+    metrics = model.evaluate(
+        x=X,
+        y=y,
+        batch_size=batch_size,
+        verbose=0,
+        # callbacks=None,
+        return_dict=True
+    )
+
+    loss = metrics["loss"]
+    mae = metrics["mae"]
+
+    print(f"✅ Model evaluated, MAE: {round(mae, 2)}")
+
+    return metrics
