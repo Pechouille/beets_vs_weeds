@@ -1,3 +1,6 @@
 lxml
+pandas
+PIL
+matplotlib
 python-dotenv
 numpy
