@@ -2,3 +2,4 @@ lxml
 python-dotenv
 numpy
 tensorflow
+torchvision
