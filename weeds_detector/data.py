@@ -22,6 +22,5 @@ def get_filepath(filename: str):
             return None
 
 def get_filepath_in_directories(filename: str, directories: list):
-    directories.append(filename)
-    path = '/'.join(directories)
+    path = '/'.join(directories + [filename])
     return get_filepath(path)
