@@ -1,0 +1,7 @@
+.DEFAULT_GOAL := default
+
+##################### BUCKET ACTIONS #####################
+reset_gcs_preprocessed_files:
+	-gcloud storage folders delete gs://${BUCKET_NAME}/data/preprocessed
+	-gcloud storage folders create --recursive gs://${BUCKET_NAME}/data/preprocessed
+
