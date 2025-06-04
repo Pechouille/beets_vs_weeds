@@ -6,17 +6,16 @@ from weeds_detector.data import get_filepath_in_directories, get_filepath, get_j
 from weeds_detector.params import *
 from google.cloud import storage
 
-# image = "all/"
+
 OUTPUT_DIR = f"preprocessed/croped_{DATA_SIZE}"
 annotation_file = get_filepath("json_train_set.json")
 csv_path = get_filepath("image_characteristics.csv")
-
-# 1. Recuperer toutes les annotations
 data = get_json_content("json_train_set.json")
 
-# 2. Recuperer toutes les images et leurs caracteristiques
+
 def load_id_to_filename(csv_path: str) -> dict:
-    """Map image_id to filename from CSV file."""
+    """Map image_id to filename from CSV file and
+    take only DATA_SIZE numbers of images."""
     df = pd.read_csv(csv_path)
     size = DATA_SIZE_MAP.get(DATA_SIZE)
     if size is None:
@@ -46,7 +45,7 @@ def build_filename(filename, image_id, bbox_id, category_id):
     return f"{filename}_{image_id}_{bbox_id}_{category_id}.png"
 
 def save_cropped_image(cropped: Image, output_dir: str, output_name: str):
-    """Save cropped images in a new file"""
+    """Save cropped images in a new file if FILE_ORIGIN is gcp or local"""
     if FILE_ORIGIN == 'local':
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, output_name)
