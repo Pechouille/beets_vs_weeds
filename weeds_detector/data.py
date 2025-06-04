@@ -36,3 +36,47 @@ def get_json_content(filename):
     file = get_filepath(filename)
     with open(file, "r") as f:
         return json.load(f)
+
+def extension_accepted(filename: str, extensions: list):
+    extension = os.path.splitext(filename)[-1].lower()
+    return extension in extensions
+
+def get_all_files_path_and_name_in_directory(directory_path: str, extensions: list=[]):
+    """
+    Build filepath differently if files is saved locally or in GCP.
+    """
+    files_list = []
+    if FILE_ORIGIN == 'local':
+        directory_path = os.path.join(LOCAL_DATA_PATH, directory_path)
+        if not os.path.exists(directory_path):
+            print(f"❌ Directory not found : {directory_path}")
+            return None
+
+
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+            if os.path.isfile(file_path):
+                if extensions != [] and extension_accepted(filename, extensions):
+                    files_list.append([file_path, filename])
+                elif extensions == []:
+                    files_list.append([file_path, filename])
+
+    if FILE_ORIGIN == 'gcp':
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        prefix = f"data/{directory_path}/"
+        if extensions != []:
+            blobs = []
+            for extension in extensions:
+                pattern = f"**{extension}"
+                blobs += bucket.list_blobs(match_glob=pattern, prefix=prefix)
+        else:
+            blobs = bucket.list_blobs(prefix=prefix)
+
+        if len(blobs) != 0:
+            for blob in blobs:
+                files_list.append([blob.public_url, blob.name.replace(prefix, "")])
+        else:
+            print(f"❌ Directory not found or zero files in this directory : {directory_path}")
+
+    return files_list
