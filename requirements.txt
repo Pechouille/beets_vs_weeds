@@ -1,0 +1,7 @@
+lxml
+pandas
+pillow
+python-dotenv
+numpy
+tensorflow
+torchvision
