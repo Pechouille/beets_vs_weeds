@@ -35,7 +35,7 @@ def preprocess_features(X, output_folder):
     X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
     X_prepro = X_prepro / 255
 
-    y = np.zeros(1000)
+    y = np.zeros(len(X_prepro))
     i = -1
     for image_name in os.listdir(X):
         i += 1
