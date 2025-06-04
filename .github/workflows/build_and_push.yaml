@@ -5,11 +5,11 @@ on:
     branches: ["master"]
 
 env:
-  PROJECT_ID: ${{env.PROJECT_ID}
-  ARTIFACT_REGION: ${{env.ARTIFACT_REGION}
-  ARTIFACT_GAR_LOCATION: ${{env.ARTIFACT_GAR_LOCATION}
+  PROJECT_ID: ${{ env.PROJECT_ID }}
+  ARTIFACT_REGION: ${{ env.ARTIFACT_REGION }}
+  ARTIFACT_GAR_LOCATION: ${{ env.ARTIFACT_GAR_LOCATION }}
 
-job:
+jobs:
   build-push-artifact:
     runs-on: ubuntu-latest
     steps:
