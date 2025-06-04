@@ -1,4 +1,5 @@
 import os
+import json
 from weeds_detector.params import *
 from google.cloud import storage
 
@@ -30,3 +31,8 @@ def get_filepath_in_directories(filename: str, directories: list):
     """
     path = os.path.join(*directories, filename)
     return get_filepath(path)
+
+def get_json_content(filename):
+    file = get_filepath(filename)
+    with open(file, "r") as f:
+        return json.load(f)

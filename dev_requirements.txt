@@ -1,8 +1,9 @@
 lxml
 pandas
-PIL
+pillow
 matplotlib
 python-dotenv
 numpy
 tensorflow
 torchvision
+google-cloud-storage

@@ -15,7 +15,7 @@ Détection vidéo d'adventices dans le cadre de la culture de la Betterave
 git clone git@github.com:Pechouille/beets_vs_weeds.git
 cd beets_vs_weeds
 bash ./install-hooks.sh
-pip install ./dev_requirements.txt
+pip install -r ./dev_requirements.txt
 ```
 
 ### Branch Nomenclature
