@@ -10,8 +10,10 @@ from weeds_detector.utils.padding import expand2square
 
 
 def preprocess_features(X, output_folder):
-    # X est le folder où se trouvent les images à traiter
-    # Output folder est le folder où rajouter les images traitées
+    """
+    X being the folder where the images to process are located
+    Output folder is the empty folder needed to add the preprocessed images
+    """
 
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])

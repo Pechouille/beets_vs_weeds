@@ -2,7 +2,6 @@ from tensorflow.keras import Sequential, Input, layers, callbacks
 import numpy as np
 
 def initialize_model():
-
     """Initialize the Neural Network with random weights"""
     model = Sequential()
     model.add(Input(shape=(128, 128, 3)))
@@ -20,7 +19,7 @@ def initialize_model():
     model.add(layers.Conv2D(64, kernel_size=(3, 3), activation='relu'))
     model.add(layers.MaxPool2D(pool_size=(2, 2)))
 
-    ### Fourth Convolution & MaxPooling
+    ### Fourth Convolution
     model.add(layers.Conv2D(64, kernel_size=(2, 2), activation='relu'))
 
     ### Flattening
@@ -29,7 +28,7 @@ def initialize_model():
     ### One Fully Connected layer - "Fully Connected" is equivalent to saying "Dense"
     model.add(layers.Dense(10, activation='relu'))
 
-    ### Last layer - Classification Layer with 2 outputs corresponding to circle and triangle
+    ### Last layer - Classification Layer with 2 outputs corresponding to beets or weeds
     model.add(layers.Dense(1, activation='sigmoid'))
 
     return model

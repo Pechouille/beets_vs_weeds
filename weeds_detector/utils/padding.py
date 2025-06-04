@@ -1,7 +1,7 @@
 from PIL import Image
 
 def expand2square(pil_img, background_color):
-    # effectue une opération de padding pour rendre une image carrée, tout en conservant son ratio d’origine
+    """ Padding operation to make the image square while conserving the original ratio"""
     width, height = pil_img.size
     if width == height:
         return pil_img
