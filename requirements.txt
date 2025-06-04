@@ -1,6 +1,5 @@
 lxml
 pandas
 pillow
-matplotlib
 python-dotenv
 numpy
