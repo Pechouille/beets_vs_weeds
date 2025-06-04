@@ -8,6 +8,7 @@ env:
   PROJECT_ID: ${{ vars.PROJECT_ID }}
   ARTIFACT_REGION: ${{ vars.ARTIFACT_REGION }}
   ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
 
 jobs:
   build-push-artifact:
@@ -34,10 +35,10 @@ jobs:
       - name: Build image
         run: |-
           docker build . --file ./Dockerfile \
-            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:${{ github.sha }} \
-            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:latest
+            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Push image
         run: |-
-          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:${{ github.sha }}
-          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:latest
+          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
