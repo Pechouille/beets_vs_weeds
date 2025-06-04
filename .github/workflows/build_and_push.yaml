@@ -42,3 +42,16 @@ jobs:
         run: |-
           docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.MY_PROJECT_ENV }}  \
+            --image "${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+            --platform managed \
+            --region ${{ secrets.ARTIFACT_REGION }} \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 1 \
+            --project ${{ secrets.GCP_PROJECT_ID  }} \
+            --service-account ${{ secrets.SERVICE_ACCOUNT_KEY }}
