@@ -5,35 +5,39 @@ on:
     branches: ["master"]
 
 env:
-  PROJECT_ID: ${{ env.PROJECT_ID }}
-  ARTIFACT_REGION: ${{ env.ARTIFACT_REGION }}
-  ARTIFACT_GAR_LOCATION: ${{ env.ARTIFACT_GAR_LOCATION }}
+  PROJECT_ID: ${{ vars.PROJECT_ID }}
+  ARTIFACT_REGION: ${{ vars.ARTIFACT_REGION }}
+  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
 
 jobs:
   build-push-artifact:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
 
       - id: "auth"
-        uses: "google-github-actions/auth@v1"
+        uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
 
       - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v1"
+        uses: "google-github-actions/setup-gcloud@v2"
 
       - name: "Use gcloud CLI"
         run: "gcloud info"
 
       - name: "Docker auth"
         run: |-
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+          gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
 
       - name: Build image
-        run: docker build . --file ./Dockerfile --tag ${{ env.GAR_LOCATION }}
-        working-directory: .
+        run: |-
+          docker build . --file ./Dockerfile \
+            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:${{ github.sha }} \
+            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:latest
 
       - name: Push image
-        run: docker push ${{ env.GAR_LOCATION }}
+        run: |-
+          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:${{ github.sha }}
+          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}:latest
