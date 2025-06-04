@@ -19,7 +19,7 @@ def initialize_model():
     model.add(layers.Conv2D(64, kernel_size=(3, 3), activation='relu'))
     model.add(layers.MaxPool2D(pool_size=(2, 2)))
 
-    ### Fourth Convolution & MaxPooling
+    ### Fourth Convolution
     model.add(layers.Conv2D(64, kernel_size=(2, 2), activation='relu'))
 
     ### Flattening
