@@ -61,6 +61,26 @@ def generate_custom_bounding_box_image(bounding_box_characterist_CSV_file,
         right = left + new_bounding_size
         bottom = top + new_bounding_size
 
+        if left < 0:
+            translate = left * -1
+            left = 0
+            right += translate
+
+        if top < 0:
+            translate = top * -1
+            top = 0
+            bottom += translate
+
+        if right > image.size[0]:
+            translate = right - image.size[0]
+            right = image.size[0]
+            left -= translate
+
+        if bottom > image.size[1]:
+            translate = bottom - image.size[1]
+            bottom = image.size[1]
+            top -= translate
+
         #crop image to bounding size
         cropped = image.crop((left, top, right, bottom))
 
