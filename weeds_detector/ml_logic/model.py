@@ -2,7 +2,6 @@ from tensorflow.keras import Sequential, Input, layers, callbacks
 import numpy as np
 
 def initialize_model():
-
     """Initialize the Neural Network with random weights"""
     model = Sequential()
     model.add(Input(shape=(128, 128, 3)))
