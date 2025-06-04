@@ -17,8 +17,16 @@ RESIZED = os.environ.get("RESIZED")
 ################## VALIDATIONS #################
 
 env_valid_options = dict(
+    DATA_SIZE=["1k", "2k", "3k", "all"],
     FILE_ORIGIN=["local", "gcp"]
 )
+DATA_SIZE_MAP = {
+    "1k": 1000,
+    "2k": 2000,
+    "3k": 3000,
+    "all": None
+}
+
 
 def validate_env_value(env, valid_options):
     env_value = os.environ[env]
