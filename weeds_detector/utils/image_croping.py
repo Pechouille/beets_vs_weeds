@@ -61,7 +61,7 @@ def save_cropped_image(cropped: Image, output_dir: str, output_name: str):
         blob.upload_from_filename(output_name)
         print(f"✅ Uploaded to GCP: {blob_path}")
 
-id_to_filename = load_id_to_filename(csv_path)
+# id_to_filename = load_id_to_filename(csv_path)
 
 def crop_annotations(data, id_to_filename, image_dir, output_dir):
     """

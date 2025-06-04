@@ -2,6 +2,7 @@ import os
 import json
 from weeds_detector.params import *
 from google.cloud import storage
+import requests
 
 def get_filepath(filename: str):
     """
@@ -34,5 +35,14 @@ def get_filepath_in_directories(filename: str, directories: list):
 
 def get_json_content(filename):
     file = get_filepath(filename)
-    with open(file, "r") as f:
-        return json.load(f)
+
+    if FILE_ORIGIN == 'gcp':
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+
+        blob = bucket.blob(f"data/{filename}")
+        str_json = blob.download_as_text()
+        return json.loads(str_json)
+    else:
+        with open(file, "r") as f:
+            return json.load(f)
