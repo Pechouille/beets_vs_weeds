@@ -1,6 +1,7 @@
 lxml
 pandas
-PIL
+pillow
 matplotlib
 python-dotenv
 numpy
+google-cloud-storage
