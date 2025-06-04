@@ -14,7 +14,6 @@ BUCKET_NAME = os.environ.get("BUCKET_NAME")
 INSTANCE = os.environ.get("INSTANCE")
 RESIZED = os.environ.get("RESIZED")
 
-
 ################## VALIDATIONS #################
 
 env_valid_options = dict(
