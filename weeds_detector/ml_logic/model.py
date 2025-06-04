@@ -28,7 +28,7 @@ def initialize_model():
     ### One Fully Connected layer - "Fully Connected" is equivalent to saying "Dense"
     model.add(layers.Dense(10, activation='relu'))
 
-    ### Last layer - Classification Layer with 2 outputs corresponding to circle and triangle
+    ### Last layer - Classification Layer with 2 outputs corresponding to beets or weeds
     model.add(layers.Dense(1, activation='sigmoid'))
 
     return model
