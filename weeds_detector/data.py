@@ -28,5 +28,5 @@ def get_filepath_in_directories(filename: str, directories: list):
     """
     Build filepath with file in folders differently if files is saved locally or in GCP.
     """
-    path = '/'.join(directories + [filename])
+    path = os.path.join(*directories, filename)
     return get_filepath(path)
