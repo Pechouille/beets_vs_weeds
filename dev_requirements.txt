@@ -4,3 +4,5 @@ PIL
 matplotlib
 python-dotenv
 numpy
+tensorflow
+torchvision
