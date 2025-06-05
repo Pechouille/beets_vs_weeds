@@ -1,9 +1,7 @@
 name: Deploy Image Docker from Artifact to Cloud Rung
 
 on:
-  pull_request:
-    types: [closed]
-    branches: ["yolo"]
+  workflow_dispatch:
 
 
 env:
@@ -47,3 +45,4 @@ jobs:
             --max-instances 1 \
             --project ${{ env.PROJECT_ID  }} \
             --service-account ${{ secrets.SERVICE_ACCOUNT_KEY }}
+            --allow-unauthenticated
