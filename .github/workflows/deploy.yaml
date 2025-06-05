@@ -1,9 +1,9 @@
-name: Build and Push to Artifact Registry
+name: Deploy Image Docker from Artifact to Cloud Rung
 
 on:
   pull_request:
     types: [closed]
-    branches: ["master"]
+    branches: ["yolo"]
 
 
 env:
@@ -13,7 +13,7 @@ env:
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
 
 jobs:
-  build-push-artifact:
+  deploy_docker:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
@@ -34,17 +34,6 @@ jobs:
       - name: "Docker auth"
         run: |-
           gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
-
-      - name: Build image
-        run: |-
-          docker build . --file ./Dockerfile \
-            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --tag ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Push image
-        run: |-
-          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Deploy to Cloud Run
         run: |
