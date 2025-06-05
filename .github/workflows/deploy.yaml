@@ -1,8 +1,17 @@
-name: Deploy Image Docker from Artifact to Cloud Rung
+name: Deploy Docker Image from Artifact Registry to Compute Engine
 
 on:
   workflow_dispatch:
-
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
 
 env:
   PROJECT_ID: ${{ vars.PROJECT_ID }}
@@ -36,23 +45,86 @@ jobs:
         run: |-
           gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
 
-      - name: Create instance if not exists
+      - name: "Verify image exists"
+        run: |
+          if ! gcloud artifacts docker images describe \
+            ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest; then
+            echo "❌ Docker image not found in Artifact Registry"
+            exit 1
+          fi
+          echo "✅ Docker image verified in Artifact Registry"
+
+      - name: "Ensure firewall rule exists"
+        run: |
+          if ! gcloud compute firewall-rules describe allow-http-8080 > /dev/null 2>&1; then
+            echo "Creating firewall rule for HTTP traffic on port 8080..."
+            gcloud compute firewall-rules create allow-http-8080 \
+              --allow tcp:8080 \
+              --source-ranges 0.0.0.0/0 \
+              --target-tags http-server \
+              --description "Allow HTTP traffic on port 8080"
+          else
+            echo "✅ Firewall rule already exists"
+          fi
+
+      - name: "Create or update instance"
         run: |
           if ! gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} > /dev/null 2>&1; then
-            echo "Creating new instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
+            echo "🚀 Creating new instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
             gcloud compute instances create-with-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
               --machine-type=${{ env.COMPUTE_ENGINE_MACHINE_TYPE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
               --container-restart-policy=always \
-              --container-env=PORT=8080,ENV=${{ matrix.environment }} \
+              --container-env=PORT=8080,ENV=${{ inputs.environment }} \
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
-              --disk-size=20GB \
-              --disk-type=pd-standard
+              --boot-disk-size=20GB \
+              --boot-disk-type=pd-standard \
+              --image-family=cos-stable \
+              --image-project=cos-cloud
           else
-            echo "Instance exists, updating container..."
+            echo "🔄 Instance exists, updating container..."
             gcloud compute instances update-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
-              --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest
+              --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
+              --container-env=PORT=8080,ENV=${{ inputs.environment }}
+          fi
+
+      - name: "Wait for instance to be ready"
+        run: |
+          echo "⏳ Waiting for instance to be ready..."
+          timeout 300 bash -c 'until gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} --format="get(status)" | grep -q "RUNNING"; do sleep 10; done'
+
+      - name: "Get deployment details"
+        run: |
+          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
+            --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+          echo "🎉 Application deployed successfully!"
+          echo "📍 Instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
+          echo "🌍 Zone: ${{ env.COMPUTE_ENGINE_ZONE }}"
+          echo "🔗 External IP: $EXTERNAL_IP"
+          echo "🌐 Access URL: http://$EXTERNAL_IP:8080"
+          echo "🏷️  Environment: ${{ inputs.environment }}"
+
+      - name: "Health check"
+        run: |
+          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
+            --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+          echo "🩺 Performing health check..."
+          # Wait a bit for the container to start
+          sleep 30
+
+          # Try to curl the application (adjust endpoint as needed)
+          if curl -f -s --max-time 30 "http://$EXTERNAL_IP:8080/health" > /dev/null 2>&1 || \
+             curl -f -s --max-time 30 "http://$EXTERNAL_IP:8080/" > /dev/null 2>&1; then
+            echo "✅ Health check passed - Application is responding"
+          else
+            echo "⚠️  Health check failed - Application may still be starting up"
+            echo "🔍 Check the application logs with:"
+            echo "gcloud compute ssh ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} --command='docker logs \$(docker ps -q)'"
           fi
