@@ -5,3 +5,5 @@ python-dotenv
 numpy
 tensorflow
 torchvision
+fastapi
+uvicorn
