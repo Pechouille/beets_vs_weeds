@@ -2,16 +2,6 @@ name: Deploy Docker Image from Artifact Registry to Compute Engine
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-        - development
-        - staging
-        - production
 
 env:
   PROJECT_ID: ${{ vars.PROJECT_ID }}
@@ -25,6 +15,9 @@ env:
 jobs:
   deploy_docker:
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: "Checkout"
         uses: "actions/checkout@v4"
@@ -63,7 +56,7 @@ jobs:
               --machine-type=${{ env.COMPUTE_ENGINE_MACHINE_TYPE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
               --container-restart-policy=always \
-              --container-env=PORT=8080,ENV=${{ inputs.environment }} \
+              --container-env=PORT=8080 \
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
               --boot-disk-size=20GB \
@@ -75,7 +68,7 @@ jobs:
             gcloud compute instances update-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
-              --container-env=PORT=8080,ENV=${{ inputs.environment }}
+              --container-env=PORT=8080
           fi
 
       - name: "Wait for instance to be ready"
@@ -94,4 +87,3 @@ jobs:
           echo "🌍 Zone: ${{ env.COMPUTE_ENGINE_ZONE }}"
           echo "🔗 External IP: $EXTERNAL_IP"
           echo "🌐 Access URL: http://$EXTERNAL_IP:8080"
-          echo "🏷️  Environment: ${{ inputs.environment }}"
