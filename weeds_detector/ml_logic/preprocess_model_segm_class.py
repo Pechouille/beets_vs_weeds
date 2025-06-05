@@ -13,13 +13,14 @@ csv = pd.read_csv('data/csv/image_characteristics.csv')
 
 images_plus_de_10 = csv[csv.number_items_per_picture > 10][['id', 'filename', 'number_items_per_picture']]
 
+json_path = '/Users/ramoisiaux/code/Pechouille/beets_vs_weeds/data/test:val:train/json_train_set.json'
+
+with open(json_path, 'r') as f:
+        data = json.load(f)
+
 excluded_filenames = set(images_plus_de_10['filename'])
 annotated_ids = set(img["image_id"] for img in data["annotations"])
 excluded_id = set(images_plus_de_10['id'])
-
-json_path = '/Users/ramoisiaux/code/Pechouille/beets_vs_weeds/data/test:val:train/json_train_set.json'
-
-
 
 
 def preprocess_images(input_folder, output_folder, prepro_folder):
@@ -28,9 +29,6 @@ def preprocess_images(input_folder, output_folder, prepro_folder):
     output folder is the empty folder that will contain only the images we need to preprocess
     prepro folder is the empty folder that will contain the images preprocessed
     """
-
-    with open(json_path, 'r') as f:
-        data = json.load(f)
 
     file_names = set(img["file_name"] for img in data.get("images", []) if img["file_name"] not in excluded_filenames and img["id"] in annotated_ids)
 
@@ -65,9 +63,6 @@ def preprocess_images(input_folder, output_folder, prepro_folder):
 def preprocess_y():
 
     dictio = {}
-
-    with open(json_path, 'r') as f:
-        data = json.load(f)
 
     excluded_id = set(images_plus_de_10['id'])
 
