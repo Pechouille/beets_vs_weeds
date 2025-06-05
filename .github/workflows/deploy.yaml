@@ -2,16 +2,6 @@ name: Deploy Docker Image from Artifact Registry to Compute Engine
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-        - development
-        - staging
-        - production
 
 env:
   PROJECT_ID: ${{ vars.PROJECT_ID }}
@@ -25,6 +15,9 @@ env:
 jobs:
   deploy_docker:
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: "Checkout"
         uses: "actions/checkout@v4"
