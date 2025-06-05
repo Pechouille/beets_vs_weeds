@@ -8,9 +8,14 @@ from google.cloud import storage
 
 
 OUTPUT_DIR = f"preprocessed/croped_{DATA_SIZE}"
-annotation_file = get_filepath("json_train_set.json")
-csv_path = get_filepath("image_characteristics.csv")
-data = get_json_content("json_train_set.json")
+
+def load_data():
+    """Load json path and csv path and load data from json"""
+    annotation_file = get_filepath("json_train_set.json")
+    csv_path = get_filepath("image_characteristics.csv")
+    data = get_json_content("json_train_set.json")
+
+    return annotation_file,csv_path,data
 
 
 def load_id_to_filename(csv_path: str) -> dict:
@@ -23,7 +28,8 @@ def load_id_to_filename(csv_path: str) -> dict:
         df = df
     else:
         df = df.iloc[:size]
-    return dict(zip(df['id'], df['filename']))
+    id_to_filename = dict(zip(df['id'], df['filename']))
+    return id_to_filename
 
 
 def load_image(filename: str, image_dir: list) -> Image:
@@ -60,7 +66,7 @@ def save_cropped_image(cropped: Image, output_dir: str, output_name: str):
         blob.upload_from_filename(output_name)
         print(f"✅ Uploaded to GCP: {blob_path}")
 
-# id_to_filename = load_id_to_filename(csv_path)
+
 
 def crop_annotations(data, id_to_filename, image_dir, output_dir):
     """
