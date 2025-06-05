@@ -7,7 +7,10 @@ from weeds_detector.params import *
 from google.cloud import storage
 
 
-OUTPUT_DIR = f"preprocessed/croped_{DATA_SIZE}"
+def output_directory():
+    """Output directory (cropped_images)"""
+    output_dir = f"preprocessed/croped_{DATA_SIZE}"
+    return output_dir
 
 def load_data():
     """Load json path and csv path and load data from json"""
