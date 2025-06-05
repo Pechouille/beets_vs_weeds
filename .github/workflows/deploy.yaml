@@ -32,6 +32,15 @@ jobs:
       - name: "Use gcloud CLI"
         run: "gcloud info"
 
+      - name: Debug authentication
+        run: |
+          echo "=== Current gcloud config ==="
+          gcloud config list
+          echo "=== Active account ==="
+          gcloud auth list --filter=status:ACTIVE
+          echo "=== Service account info ==="
+          gcloud iam service-accounts describe $(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+
       - name: "Docker auth"
         run: |-
           gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
