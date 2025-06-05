@@ -2,7 +2,9 @@ name: Build and Push to Artifact Registry
 
 on:
   pull_request:
+    types: [closed]
     branches: ["master"]
+
 
 env:
   PROJECT_ID: ${{ vars.PROJECT_ID }}
@@ -45,13 +47,13 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ env.MY_PROJECT_ENV }}  \
+          gcloud run deploy ${{ env.PROJECT_ID }}  \
             --image "${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
             --platform managed \
-            --region ${{ secrets.ARTIFACT_REGION }} \
+            --region ${{ env.ARTIFACT_REGION }} \
             --port 8080 \
             --memory 512Mi \
             --cpu 1 \
             --max-instances 1 \
-            --project ${{ secrets.GCP_PROJECT_ID  }} \
+            --project ${{ env.PROJECT_ID  }} \
             --service-account ${{ secrets.SERVICE_ACCOUNT_KEY }}
