@@ -12,6 +12,7 @@ from google.cloud import storage
 
 from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath, get_existing_files
+from weeds_detector.utils.images import save_image
 
 def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename):
     file_url = get_filepath(image_characteristics_filename)
@@ -38,7 +39,6 @@ def img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids):
             filenames.append(file_name)
     img_needed = set(filenames)
     return img_needed
-
 
 def create_folder(folder_name):
     if FILE_ORIGIN == 'local':
@@ -108,8 +108,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
             resized_value = int(RESIZED)
             new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
             output_dir2 = create_folder('images_preprocessed')
-            save_path = get_folderpath(output_dir2)
-            new_image.save(save_path, "PNG")
+            save_image(new_image, output_dir2, f"preprocessed_{file_name}")
             transf = transform(new_image)
             tensor = transf.permute(1, 2, 0)
             list_of_tensors.append(tensor)

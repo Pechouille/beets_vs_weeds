@@ -1,16 +1,12 @@
-import os
 import time
 import logger
 from PIL import Image
 import pandas as pd
 from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content, get_existing_files
 from weeds_detector.params import *
-from google.cloud import storage
-import requests
-from io import BytesIO
 from requests.exceptions import MissingSchema
-from typing import Set, Dict, List, Tuple
 from weeds_detector.utils.logger import setup_logging
+from weeds_detector.utils.images import save_image, load_image
 
 
 def output_directory():
@@ -39,21 +35,6 @@ def load_id_to_filename(csv_path: str) -> dict:
     return id_to_filename
 
 
-def load_image(filename: str, image_dir: list) -> Tuple[Image.Image, str]:
-    """Load images from data.py with the image_path"""
-    image_path = get_filepath_in_directories(filename, image_dir)
-    if FILE_ORIGIN == 'local':
-        if not image_path or not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image not found: {filename}")
-        return Image.open(image_path), image_path
-    elif FILE_ORIGIN == 'gcp':
-        response = requests.get(image_path)
-        if response.status_code != 200:
-            raise FileNotFoundError(f"❌ Unable to download image from GCP URL: {image_path}")
-        image = Image.open(BytesIO(response.content))
-        return image, image_path
-
-
 def crop_image(image: Image.Image, bbox: list) -> Image.Image:
     """Crop image with bbox from json file"""
     x, y, w, h = bbox
@@ -63,26 +44,6 @@ def crop_image(image: Image.Image, bbox: list) -> Image.Image:
 def build_filename(filename: str, image_id: int, bbox_id: int, category_id: int) -> str:
     """The name of the output file"""
     return f"{filename}_{image_id}_{bbox_id}_{category_id}.png"
-
-
-def save_cropped_image(cropped: Image.Image, output_dir: str, output_name: str):
-    """Save cropped images in a new file if FILE_ORIGIN is gcp or local"""
-    if FILE_ORIGIN == 'local':
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, output_name)
-        cropped.save(output_path)
-
-    elif FILE_ORIGIN == 'gcp':
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob_path = os.path.join("data", output_dir, output_name)
-        blob = bucket.blob(blob_path)
-
-        image_bytes = BytesIO()
-        cropped.save(image_bytes, format="PNG")
-        image_bytes.seek(0)
-
-        blob.upload_from_file(image_bytes, content_type='image/png')
 
 def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_dir: str):
     """
@@ -138,8 +99,8 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
         try:
             # Load and process image
             image, image_path = load_image(filename, image_dir)
-            cropped = crop_image(image, bbox)
-            save_cropped_image(cropped, output_dir, output_name)
+            cropped_image = crop_image(image, bbox)
+            save_image(cropped_image, output_dir, output_name)
 
             count += 1
             total_count += 1
