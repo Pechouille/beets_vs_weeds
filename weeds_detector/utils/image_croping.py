@@ -3,7 +3,6 @@ import logging
 import time
 from pathlib import Path
 from PIL import Image
-import json
 import pandas as pd
 from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content
 from weeds_detector.params import *
@@ -164,6 +163,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"Found {len(existing_crops)} existing crops to skip")
 
     count = 0
+    total_count = len(existing_crops)
     skipped_count = 0
     error_count = 0
     valid_image_ids = set(id_to_filename.keys())
@@ -178,9 +178,8 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"Processing {total_annotations} valid annotations")
 
     start_time = time.time()
-
+    existing_crops = get_existing_crops(output_dir)
     for i, annotation in enumerate(annotations):
-        existing_crops = get_existing_crops(output_dir)
         image_id = annotation["image_id"]
         bbox = annotation["bbox"]
         category_id = annotation["category_id"]
@@ -192,8 +191,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
         # Skip if already processed
         if output_name in existing_crops:
             skipped_count += 1
-            if skipped_count % 100 == 0:  # Log every 100 skips
-                logger.info(f"Skipped {skipped_count} already processed crops")
+            logger.info(f"Skipped {output_name} already processed crops")
             continue
 
         try:
@@ -203,10 +201,10 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
             save_cropped_image(cropped, output_dir, output_name)
 
             count += 1
-
+            total_count += 1
             elapsed_time = time.time() - start_time
             rate = count / elapsed_time if elapsed_time > 0 else 0
-            logger.info(f"✅ Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
+            logger.info(f"✅ {count} | {total_count} | Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
 
         except (FileNotFoundError, MissingSchema) as e:
             logger.error(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
