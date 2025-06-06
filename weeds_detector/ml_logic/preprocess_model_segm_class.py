@@ -88,34 +88,20 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
 
     img_needed = img_needed_filenames(splited_data, excluded_filename, annotated_ids)
 
-    output_dir = create_folder('images_to_preprocess')
-    origin_dir = 'data/all'
-    existing_copy = get_existing_files('data/all')
-    for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
-        if file_name in img_needed:
-            if file_name in existing_copy:
-                print(f"❌ File already copied : {file_name}")
-                continue
-            copy_file(file_name, origin_dir, output_dir)
-
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
-    for image_path, image_name in get_all_files_path_and_name_in_directory(output_dir):
-        response = requests.get(image_path)
-        img = Image.open(BytesIO(response.content)).convert("RGB")
-
-        new_image = expand2square(img, (0, 0, 0)).resize((RESIZED,RESIZED))
-
-        output_dir2 = create_folder('images_preprocessed')
-
-        save_path = get_folderpath(output_dir2)
-
-        new_image.save(save_path)
-
-        transf = transform(new_image)
-        tensor = transf.permute(1, 2, 0)
-        list_of_tensors.append(tensor)
+    for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
+        if file_name in img_needed:
+            response = requests.get(file_path)
+            img = Image.open(BytesIO(response.content)).convert("RGB")
+            new_image = expand2square(img, (0, 0, 0)).resize((RESIZED,RESIZED))
+            output_dir2 = create_folder('images_preprocessed')
+            save_path = get_folderpath(output_dir2)
+            new_image.save(save_path)
+            transf = transform(new_image)
+            tensor = transf.permute(1, 2, 0)
+            list_of_tensors.append(tensor)
 
     X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
     X_prepro = X_prepro / 255
