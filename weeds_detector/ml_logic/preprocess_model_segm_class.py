@@ -11,9 +11,6 @@ from google.cloud import storage
 from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath
 
-image_characteristics_filename = "image_characteristics.csv"
-data_split_filename = "json_train_set.json"
-
 def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename):
     file_url = get_filepath(image_characteristics_filename)
     file_df = pd.read_csv(file_url)
@@ -73,7 +70,8 @@ def copy_file(file_name, origin_dir, output_dir):
         print("✅ Images copied in the ouput_dir")
         return None
 
-def preprocess_images(number_of_bbox, image_characteristics_filename, data_split_filename):
+
+def preprocess_images(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
     """
     input folder being the folder where all images are located
     output folder is the empty folder that will contain only the images we need to preprocess
@@ -102,7 +100,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename, data_split
 
         img = Image.open(image_path).convert("RGB")
 
-        new_image = expand2square(img, (0, 0, 0)).resize((128,128))
+        new_image = expand2square(img, (0, 0, 0)).resize((RESIZED,RESIZED))
 
         output_dir2 = create_folder('images_preprocessed')
 
@@ -119,22 +117,25 @@ def preprocess_images(number_of_bbox, image_characteristics_filename, data_split
 
     return X_prepro
 
-def preprocess_y():
+def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
+
+    splited_data = get_json_content(data_split_filename)
+
+    file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
 
     dictio = {}
 
-    excluded_id = set(images_plus_de_10['id'])
+    excluded_id = set(file_filtered_df['id'])
 
-
-    for dict in data['annotations']:
+    for dict in splited_data['annotations']:
         if dict['image_id'] not in excluded_id:
             dictio[dict['image_id']] = []
 
-    for dict in data['annotations']:
+    for dict in splited_data['annotations']:
         lst = []
         lst.append(dict['bbox'])
         lst.append(dict['category_id'])
-        if dict['image_id'] not in images_plus_de_10['id']:
+        if dict['image_id'] not in file_filtered_df['id']:
             dictio[dict['image_id']].append(lst)
 
     for key, value in dictio.items():
