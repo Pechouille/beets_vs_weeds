@@ -19,14 +19,14 @@ def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filena
     return file_filtered_df
 
 def annotated_img_ids(splited_data):
-    annotated_img_ids = set(bbox["image_id"] for bbox in splited_data["annotations"])
+    annotated_ids = set(bbox["image_id"] for bbox in splited_data["annotations"])
 
-    return annotated_img_ids
+    return annotated_ids
 
 def excluded_filenames(file_filtered_df):
-    excluded_filenames = set(file_filtered_df["filename"])
+    excluded_filename = set(file_filtered_df["filename"])
 
-    return excluded_filenames
+    return excluded_filename
 
 def img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids):
     filenames = []
@@ -34,8 +34,8 @@ def img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids):
         file_name = img["file_name"]
         if file_name not in excluded_filenames and img["id"] in annotated_img_ids:
             filenames.append(file_name)
-    img_needed_filenames = set(filenames)
-    return img_needed_filenames
+    img_needed = set(filenames)
+    return img_needed
 
 
 def create_folder(folder_name):
@@ -81,16 +81,16 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
 
     file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
 
-    excluded_filenames = excluded_filenames(file_filtered_df)
-    annotated_img_ids = annotated_img_ids(splited_data)
+    excluded_filename = excluded_filenames(file_filtered_df)
+    annotated_ids = annotated_img_ids(splited_data)
 
-    img_needed_filenames = img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids)
+    img_needed = img_needed_filenames(splited_data, excluded_filename, annotated_ids)
 
     output_dir = create_folder('images_to_preprocess')
     origin_dir = 'data/all'
 
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
-        if file_name in img_needed_filenames:
+        if file_name in img_needed:
             copy_file(file_name, origin_dir, output_dir)
 
     list_of_tensors = []

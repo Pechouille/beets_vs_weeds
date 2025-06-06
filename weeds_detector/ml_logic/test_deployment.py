@@ -1,5 +1,6 @@
 from weeds_detector.ml_logic.preprocess_model_segm_class import *
 from weeds_detector.ml_logic.training_model_segm_class import *
+from weeds_detector.ml_logic.registry import *
 X_prepro = preprocess_images(10)
 y_bbox, y_class = preprocess_y(10)
 model = initialize_model(max_boxes=10, num_classes=1)
@@ -13,3 +14,4 @@ model, history = train_model(model,
         epochs = 5000,
         validation_data=None,
         validation_split=0.3)
+save_model(model)
