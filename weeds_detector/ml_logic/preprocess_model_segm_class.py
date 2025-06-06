@@ -9,7 +9,7 @@ from weeds_detector.params import *
 from google.cloud import storage
 
 from weeds_detector.utils.padding import expand2square
-from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath
+from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath, get_existing_files
 
 def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename):
     file_url = get_filepath(image_characteristics_filename)
@@ -85,7 +85,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     annotated_ids = annotated_img_ids(splited_data)
 
     img_needed = img_needed_filenames(splited_data, excluded_filename, annotated_ids)
-
+    
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 

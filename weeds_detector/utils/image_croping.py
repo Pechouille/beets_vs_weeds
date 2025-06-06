@@ -1,52 +1,16 @@
 import os
-import logging
 import time
-from pathlib import Path
+import logger
 from PIL import Image
-import json
 import pandas as pd
-from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content
+from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content, get_existing_files
 from weeds_detector.params import *
 from google.cloud import storage
 import requests
 from io import BytesIO
 from requests.exceptions import MissingSchema
-import fcntl  # For file locking on Unix systems
-import socket
-import threading
 from typing import Set, Dict, List, Tuple
-
-
-# Configure logging
-def setup_logging():
-    """Setup logging configuration with both file and console handlers"""
-    hostname = socket.gethostname()
-    log_filename = f"cropping_log_{hostname}_{int(time.time())}.log"
-
-    # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(hostname)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_dir / log_filename),
-            logging.StreamHandler()  # Console output
-        ]
-    )
-
-    # Add hostname to log records
-    class HostnameFilter(logging.Filter):
-        def filter(self, record):
-            record.hostname = hostname
-            return True
-
-    for handler in logging.getLogger().handlers:
-        handler.addFilter(HostnameFilter())
-
-    return logging.getLogger(__name__)
+from weeds_detector.utils.logger import setup_logging
 
 
 def output_directory():
@@ -73,30 +37,6 @@ def load_id_to_filename(csv_path: str) -> dict:
         df = df.iloc[:size]
     id_to_filename = dict(zip(df['id'], df['filename']))
     return id_to_filename
-
-
-def get_existing_crops(output_dir: str) -> Set[str]:
-    """Get set of already processed crop filenames for skip logic"""
-    existing_crops = set()
-
-    if FILE_ORIGIN == 'local':
-        if os.path.exists(output_dir):
-            for filename in os.listdir(output_dir):
-                if filename.endswith('.png'):
-                    existing_crops.add(filename)
-
-    elif FILE_ORIGIN == 'gcp':
-        try:
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(BUCKET_NAME)
-            blob_prefix = f"data/{output_dir}/"
-
-            for blob in bucket.list_blobs(match_glob="**.png", prefix=blob_prefix):
-                existing_crops.add(os.path.basename(blob.name))
-        except Exception as e:
-            logger.warning(f"Could not list existing crops from GCP: {e}")
-
-    return existing_crops
 
 
 def load_image(filename: str, image_dir: list) -> Tuple[Image.Image, str]:
@@ -160,10 +100,11 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"File origin: {FILE_ORIGIN}")
 
     # Get existing crops to avoid reprocessing
-    existing_crops = get_existing_crops(output_dir)
+    existing_crops = get_existing_files(output_dir)
     logger.info(f"Found {len(existing_crops)} existing crops to skip")
 
     count = 0
+    total_count = len(existing_crops)
     skipped_count = 0
     error_count = 0
     valid_image_ids = set(id_to_filename.keys())
@@ -178,9 +119,8 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"Processing {total_annotations} valid annotations")
 
     start_time = time.time()
-
+    existing_crops = get_existing_files(output_dir)
     for i, annotation in enumerate(annotations):
-        existing_crops = get_existing_crops(output_dir)
         image_id = annotation["image_id"]
         bbox = annotation["bbox"]
         category_id = annotation["category_id"]
@@ -192,8 +132,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
         # Skip if already processed
         if output_name in existing_crops:
             skipped_count += 1
-            if skipped_count % 100 == 0:  # Log every 100 skips
-                logger.info(f"Skipped {skipped_count} already processed crops")
+            logger.info(f"Skipped {output_name} already processed crops")
             continue
 
         try:
@@ -203,10 +142,10 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
             save_cropped_image(cropped, output_dir, output_name)
 
             count += 1
-
+            total_count += 1
             elapsed_time = time.time() - start_time
             rate = count / elapsed_time if elapsed_time > 0 else 0
-            logger.info(f"✅ Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
+            logger.info(f"✅ {count} | {total_count} | Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
 
         except (FileNotFoundError, MissingSchema) as e:
             logger.error(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
