@@ -31,6 +31,4 @@ for env, valid_options in env_valid_options.items():
     validate_env_value(env, valid_options)
 
 ##################  CONSTANTS  #####################
-LOCAL_REGISTRY_PATH =  os.path.join(os.path.expanduser('~'), ".code", "Pechouille", "beets_vs_weeds", "training_outputs")
-LOCAL_REGISTRY_PATH =os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    "training_outputs")
+LOCAL_REGISTRY_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "training_outputs")
