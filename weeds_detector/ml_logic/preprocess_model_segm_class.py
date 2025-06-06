@@ -92,6 +92,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
         if file_name in img_needed:
             if file_name in existing_copy:
+                print(f"❌ File already copied : {file_name}")
                 continue
             copy_file(file_name, origin_dir, output_dir)
 
