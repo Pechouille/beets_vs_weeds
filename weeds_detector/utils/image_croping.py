@@ -15,13 +15,12 @@ def output_directory():
     output_dir = f"preprocessed/croped_{DATA_SIZE}"
     return output_dir
 
-def load_data():
+def load_data(json_data_path):
     """Load json path and csv path and load data from json"""
-    annotation_file = get_filepath("json_train_set.json")
     csv_path = get_filepath("image_characteristics.csv")
-    data = get_json_content("json_train_set.json")
+    data = get_json_content(json_data_path)
 
-    return annotation_file,csv_path,data
+    return csv_path,data
 
 
 def load_id_to_filename(csv_path: str) -> dict:
@@ -109,7 +108,6 @@ def crop_annotations(data, id_to_filename, image_dir, output_dir):
         bbox_id = annotation["id"]
 
         filename = id_to_filename[image_id]
-
         try:
             image, image_path = load_image(filename, image_dir)
             cropped = crop_image(image, bbox)
