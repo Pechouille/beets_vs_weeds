@@ -3,7 +3,6 @@ import logging
 import time
 from pathlib import Path
 from PIL import Image
-import json
 import pandas as pd
 from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content
 from weeds_detector.params import *
@@ -11,10 +10,8 @@ from google.cloud import storage
 import requests
 from io import BytesIO
 from requests.exceptions import MissingSchema
-import fcntl  # For file locking on Unix systems
 import socket
-import threading
-from typing import Set, Dict, List, Tuple
+from typing import Set, dict, List, Tuple
 
 
 # Configure logging
@@ -179,9 +176,8 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"Processing {total_annotations} valid annotations")
 
     start_time = time.time()
-
+    existing_crops = get_existing_crops(output_dir)
     for i, annotation in enumerate(annotations):
-        existing_crops = get_existing_crops(output_dir)
         image_id = annotation["image_id"]
         bbox = annotation["bbox"]
         category_id = annotation["category_id"]
