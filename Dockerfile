@@ -7,6 +7,7 @@ WORKDIR /weeds_detector
 # Copy the current directory contents into the container
 COPY weeds_detector /weeds_detector
 COPY requirements.txt /weeds_detector/requirements.txt
+COPY Makefile /Makefile
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --upgrade pip
