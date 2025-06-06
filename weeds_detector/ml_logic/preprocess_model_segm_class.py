@@ -109,7 +109,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
             new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
             output_dir2 = create_folder('images_preprocessed')
             save_path = get_folderpath(output_dir2)
-            new_image.save(save_path)
+            new_image.save(save_path, "PNG")
             transf = transform(new_image)
             tensor = transf.permute(1, 2, 0)
             list_of_tensors.append(tensor)
