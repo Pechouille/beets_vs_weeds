@@ -1,6 +1,5 @@
 import os
 import json
-import logger
 from weeds_detector.params import *
 from google.cloud import storage
 from typing import Set
