@@ -2,7 +2,7 @@ import os
 import json
 from weeds_detector.params import *
 from google.cloud import storage
-import requests
+from typing import Set
 
 def get_filepath(filename: str):
     """
@@ -115,3 +115,26 @@ def get_all_files_path_and_name_in_directory(directory_path: str, extensions: li
             print(f"❌ Directory not found or zero files in this directory : {directory_path}")
 
     return files_list
+
+def get_existing_files(dir: str) -> Set[str]:
+    """Get set of already processed crop filenames for skip logic"""
+    existing_files = set()
+
+    if FILE_ORIGIN == 'local':
+        if os.path.exists(dir):
+            for filename in os.listdir(dir):
+                if filename.endswith('.png'):
+                    existing_files.add(filename)
+
+    elif FILE_ORIGIN == 'gcp':
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(BUCKET_NAME)
+            blob_prefix = f"data/{dir}/"
+
+            for blob in bucket.list_blobs(match_glob="**.png", prefix=blob_prefix):
+                existing_files.add(os.path.basename(blob.name))
+        except Exception as e:
+            logger.warning(f"Could not list existing files from GCP: {e}")
+
+    return existing_files
