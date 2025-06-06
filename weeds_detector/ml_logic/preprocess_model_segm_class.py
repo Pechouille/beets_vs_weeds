@@ -5,49 +5,108 @@ import os
 import shutil
 from torchvision import transforms
 from PIL import Image
+from weeds_detector.params import *
+from google.cloud import storage
 
 from weeds_detector.utils.padding import expand2square
+from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath
+
+image_characteristics_filename = "image_characteristics.csv"
+data_split_filename = "json_train_set.json"
+
+def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename):
+    file_url = get_filepath(image_characteristics_filename)
+    file_df = pd.read_csv(file_url)
+    file_filtered_df = file_df[file_df.number_items_per_picture > number_of_bbox][['id', 'filename', 'number_items_per_picture']]
+
+    return file_filtered_df
+
+def annotated_img_ids(splited_data):
+    annotated_img_ids = set(bbox["image_id"] for bbox in splited_data["annotations"])
+
+    return annotated_img_ids
+
+def excluded_filenames(file_filtered_df):
+    excluded_filenames = set(file_filtered_df["filename"])
+
+    return excluded_filenames
+
+def img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids):
+    filenames = []
+    for img in splited_data.get("images", []):
+        file_name = img["file_name"]
+        if file_name not in excluded_filenames and img["id"] in annotated_img_ids:
+            filenames.append(file_name)
+    img_needed_filenames = set(filenames)
+    return img_needed_filenames
 
 
-csv = pd.read_csv('data/csv/image_characteristics.csv')
+def create_folder(folder_name):
+    if FILE_ORIGIN == 'local':
+        if not os.path.isdir(folder_name):
+            os.mkdir(folder_name)
+        return folder_name
+    elif FILE_ORIGIN == 'gcp':
+        client = storage.Client()
+        bucket = client.get_bucket(BUCKET_NAME)
+        folder_blob_name = folder_name if folder_name.endswith('/') else folder_name + '/'
+        blob = bucket.blob(folder_blob_name)
+        if not blob.exists():
+            blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+        return blob.name
 
-images_plus_de_10 = csv[csv.number_items_per_picture > 10][['id', 'filename', 'number_items_per_picture']]
+def copy_file(file_name, origin_dir, output_dir):
+    if FILE_ORIGIN == 'local':
+        file_path = get_filepath(file_name)
+        dst_path = os.path.join(output_dir, file_name)
+        shutil.copy2(file_path, dst_path)
+        print("✅ Images copied in the ouput_dir")
+        return None
+    elif FILE_ORIGIN == 'gcp':
+        storage_client = storage.Client()
+        source_bucket = storage_client.bucket(BUCKET_NAME)
+        source_blob = source_bucket.blob(os.path.join(origin_dir, file_name))
+        destination_blob_name = os.path.join(output_dir, file_name)
+        blob_copy = source_bucket.copy_blob(
+                source_blob, source_bucket, destination_blob_name
+        )
+        print("✅ Images copied in the ouput_dir")
+        return None
 
-json_path = '/Users/ramoisiaux/code/Pechouille/beets_vs_weeds/data/test:val:train/json_train_set.json'
-
-with open(json_path, 'r') as f:
-        data = json.load(f)
-
-excluded_filenames = set(images_plus_de_10['filename'])
-annotated_ids = set(img["image_id"] for img in data["annotations"])
-excluded_id = set(images_plus_de_10['id'])
-
-
-def preprocess_images(input_folder, output_folder, prepro_folder):
+def preprocess_images(number_of_bbox, image_characteristics_filename, data_split_filename):
     """
     input folder being the folder where all images are located
     output folder is the empty folder that will contain only the images we need to preprocess
     prepro folder is the empty folder that will contain the images preprocessed
     """
+    splited_data = get_json_content(data_split_filename)
 
-    file_names = set(img["file_name"] for img in data.get("images", []) if img["file_name"] not in excluded_filenames and img["id"] in annotated_ids)
+    file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
 
-    for image_name in os.listdir(input_folder):
-        if f'{image_name}' in file_names:
-            src_path = os.path.join(input_folder, image_name)
-            dst_path = os.path.join(output_folder, image_name)
-            shutil.copy2(src_path, dst_path)
+    excluded_filenames = excluded_filenames(file_filtered_df)
+    annotated_img_ids = annotated_img_ids(splited_data)
+
+    img_needed_filenames = img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids)
+
+    output_dir = create_folder('images_to_preprocess')
+    origin_dir = 'data/all'
+
+    for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
+        if file_name in img_needed_filenames:
+            copy_file(file_name, origin_dir, output_dir)
 
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
-    for image_name in os.listdir(output_folder):
+    for image_path, image_name in get_all_files_path_and_name_in_directory(output_dir):
 
-        image_path = os.path.join(output_folder, image_name)
         img = Image.open(image_path).convert("RGB")
 
         new_image = expand2square(img, (0, 0, 0)).resize((128,128))
-        save_path = os.path.join(prepro_folder, image_name)
+
+        output_dir2 = create_folder('images_preprocessed')
+
+        save_path = get_folderpath(output_dir2)
 
         new_image.save(save_path)
 

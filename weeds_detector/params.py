@@ -14,6 +14,7 @@ BUCKET_NAME = os.environ.get("BUCKET_NAME")
 INSTANCE = os.environ.get("INSTANCE")
 RESIZED = os.environ.get("RESIZED")
 MODEL_TARGET = os.environ.get("MODEL_TARGET")
+LOCAL_FOLDER_PATH= os.environ.get("LOCAL_FOLDER_PATH")
 
 ################## VALIDATIONS #################
 

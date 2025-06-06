@@ -26,6 +26,31 @@ def get_filepath(filename: str):
             print(f"❌ File not found : {filename}")
             return None
 
+
+def get_folderpath(foldername: str):
+    """
+    Build filepath differently if files are saved locally or in GCP.
+    """
+    if FILE_ORIGIN == 'local':
+        folderpath = os.path.join(LOCAL_DATA_PATH, foldername)
+        if not os.path.exists(folderpath):
+            print(f"❌ Folder not found : {foldername}")
+            return None
+        return folderpath
+
+    elif FILE_ORIGIN == 'gcp':
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        folder_blob_name = foldername if foldername.endswith('/') else foldername + '/'
+        blob = bucket.blob(folder_blob_name)
+
+        if blob.exists():
+            return f"gs://{BUCKET_NAME}/{folder_blob_name}"
+        else:
+            print(f"❌ Folder not found : {foldername}")
+            return None
+
+
 def get_filepath_in_directories(filename: str, directories: list):
     """
     Build filepath with file in folders differently if files is saved locally or in GCP.
