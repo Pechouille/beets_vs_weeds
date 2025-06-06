@@ -10,8 +10,10 @@ from google.cloud import storage
 import requests
 from io import BytesIO
 from requests.exceptions import MissingSchema
+import fcntl  # For file locking on Unix systems
 import socket
-from typing import Set, dict, List, Tuple
+import threading
+from typing import Set, Dict, List, Tuple
 
 
 # Configure logging
