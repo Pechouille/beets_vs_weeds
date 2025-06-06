@@ -3,6 +3,8 @@ import numpy as np
 import json
 import os
 import shutil
+import requests
+from io import BytesIO
 from torchvision import transforms
 from PIL import Image
 from weeds_detector.params import *
@@ -88,7 +90,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
 
     output_dir = create_folder('images_to_preprocess')
     origin_dir = 'data/all'
-    existing_copy = get_existing_files(output_dir)
+    existing_copy = get_existing_files('data/all')
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
         if file_name in img_needed:
             if file_name in existing_copy:
@@ -100,8 +102,8 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     transform = transforms.Compose([transforms.PILToTensor()])
 
     for image_path, image_name in get_all_files_path_and_name_in_directory(output_dir):
-
-        img = Image.open(image_path).convert("RGB")
+        response = requests.get(image_path)
+        img = Image.open(BytesIO(response.content)).convert("RGB")
 
         new_image = expand2square(img, (0, 0, 0)).resize((RESIZED,RESIZED))
 
