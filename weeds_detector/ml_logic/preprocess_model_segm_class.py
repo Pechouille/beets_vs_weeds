@@ -108,6 +108,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
         print("---------------------------")
         if file_name in img_needed:
             if not folder_exist:
+                print(f"Create image : preprocessed_{file_name} save in bucket {output_dir}")
                 response = requests.get(file_path)
                 img = Image.open(BytesIO(response.content)).convert("RGB")
                 resized_value = int(RESIZED)
@@ -118,7 +119,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
                 source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
                 image_path = source_blob.public_url
                 response = requests.get(image_path)
-                new_image = Image.open(response.content)
+                new_image = Image.open(BytesIO(response.content))
             transf = transform(new_image)
             tensor = transf.permute(1, 2, 0)
             list_of_tensors.append(tensor)
