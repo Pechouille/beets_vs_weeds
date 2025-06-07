@@ -3,8 +3,8 @@ from weeds_detector.params import RESIZED
 import numpy as np
 
 def initialize_model(max_boxes=10, num_classes=1):
-
-    inputs = Input(shape=(RESIZED, RESIZED, 3))
+    resized = int(RESIZED)
+    inputs = Input(shape=(resized, resized, 3))
 
     x = layers.Conv2D(16, kernel_size=(4, 4), activation='relu')(inputs)
     #x = layers.MaxPooling2D(pool_size=(2, 2))(x)
@@ -16,7 +16,7 @@ def initialize_model(max_boxes=10, num_classes=1):
     x = layers.Conv2D(64, kernel_size=(2, 2), activation='relu')(x)
 
     x = layers.Flatten()(x)
-    x = layers.Dense(RESIZED, activation='relu')(x)
+    x = layers.Dense(resized, activation='relu')(x)
 
     # Sortie classification : max_boxes x num_classes
     class_output = layers.Dense(max_boxes * num_classes, activation='sigmoid')(x)
