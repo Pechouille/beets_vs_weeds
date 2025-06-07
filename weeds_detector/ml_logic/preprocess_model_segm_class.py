@@ -50,9 +50,10 @@ def create_folder(folder_name):
         bucket = client.get_bucket(BUCKET_NAME)
         folder_blob_name = folder_name if folder_name.endswith('/') else folder_name + '/'
         blob = bucket.blob(folder_blob_name)
-        if not blob.exists():
+        folder_exist = blob.exists()
+        if not folder_exist:
             blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
-        return blob.name
+        return blob.name, folder_exist
 
 def copy_file(file_name, origin_dir, output_dir):
     if FILE_ORIGIN == 'local':
@@ -99,16 +100,25 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
+    output_dir, folder_exist = create_folder('images_preprocessed')
+    storage_client = storage.Client()
+    source_bucket = storage_client.bucket(BUCKET_NAME)
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
         print(f"Start Preprocess : {file_name}")
         print("---------------------------")
         if file_name in img_needed:
-            response = requests.get(file_path)
-            img = Image.open(BytesIO(response.content)).convert("RGB")
-            resized_value = int(RESIZED)
-            new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
-            output_dir2 = create_folder('images_preprocessed')
-            save_image(new_image, output_dir2, f"preprocessed_{file_name}")
+            if not folder_exist:
+                response = requests.get(file_path)
+                img = Image.open(BytesIO(response.content)).convert("RGB")
+                resized_value = int(RESIZED)
+                new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
+                save_image(new_image, output_dir, f"preprocessed_{file_name}")
+            elif folder_exist:
+                print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+                source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+                image_path = source_blob.public_url
+                response = requests.get(image_path)
+                new_image = Image.open(BytesIO(response.content))
             transf = transform(new_image)
             tensor = transf.permute(1, 2, 0)
             list_of_tensors.append(tensor)
