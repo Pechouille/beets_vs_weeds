@@ -1,8 +1,14 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from tensorflow.keras import layers, models, Input, callbacks
+import tensorflow.config as tf_config
 from weeds_detector.params import RESIZED
 import numpy as np
 
 def initialize_model(max_boxes=10, num_classes=1):
+    tf_config.set_visible_devices([], 'GPU')
+    tf_config.threading.set_inter_op_parallelism_threads(0)
     resized = int(RESIZED)
     inputs = Input(shape=(resized, resized, 3))
 
