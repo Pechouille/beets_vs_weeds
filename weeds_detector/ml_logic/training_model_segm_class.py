@@ -1,6 +1,5 @@
 from tensorflow.keras import layers, models, Input, callbacks
 from weeds_detector.params import RESIZED
-import numpy as np
 
 def initialize_model(max_boxes=10, num_classes=1):
     resized = int(RESIZED)
@@ -32,15 +31,16 @@ def initialize_model(max_boxes=10, num_classes=1):
 def compile_model(model):
 
     model.compile(
-    loss = {
-        'class_output': 'binary_crossentropy',
-        'bbox_output': 'mean_squared_error'
-    },
-    metrics = {
-        'class_output': 'precision',
-        'bbox_output': 'mean_absolute_error'
-    },
-    optimizer = 'adam')
+        loss = {
+            'class_output': 'binary_crossentropy',
+            'bbox_output': 'mean_squared_error'
+        },
+        metrics = {
+            'class_output': 'precision',
+            'bbox_output': 'mean_absolute_error'
+        },
+        optimizer = 'adam'
+    )
 
     return model
 

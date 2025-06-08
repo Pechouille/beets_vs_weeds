@@ -13,7 +13,7 @@ INSTANCE = os.environ.get("INSTANCE")
 RESIZED = os.environ.get("RESIZED", 64)
 MODEL_TARGET = os.environ.get("MODEL_TARGET")
 LOCAL_FOLDER_PATH= os.environ.get("LOCAL_FOLDER_PATH")
-
+CUDA_VISIBLE_DEVICES = os.environ.get("CUDA_VISIBLE_DEVICES", '-1')
 ################## VALIDATIONS #################
 
 env_valid_options = dict(
@@ -38,4 +38,4 @@ for env, valid_options in env_valid_options.items():
     validate_env_value(env, valid_options)
 
 ##################  CONSTANTS  #####################
-LOCAL_REGISTRY_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "training_outputs")
+LOCAL_REGISTRY_PATH = os.environ.get("LOCAL_REGISTRY_PATH", os.path.join(os.path.dirname(os.path.dirname(__file__)), "training_outputs"))

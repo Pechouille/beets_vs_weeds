@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import json
 import os
 import shutil
 import requests
@@ -100,9 +99,9 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
-    output_dir, folder_exist = create_folder('images_preprocessed')
+    output_dir, folder_exist = create_folder(f'images_preprocessed/{RESIZED}x{RESIZED}')
     storage_client = storage.Client()
-    source_bucket = storage_client.bucket(BUCKET_NAME + "/data")
+    source_bucket = storage_client.bucket(BUCKET_NAME + f"/data")
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
         print(f"Start Preprocess : {file_name}")
         print("---------------------------")
@@ -119,16 +118,19 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
                 source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
                 image_path = source_blob.public_url
                 response = requests.get(image_path)
-                new_image = Image.open(BytesIO(response.content))
+                new_image = Image.open(BytesIO(response.content)).convert("RGB")
             transf = transform(new_image)
             tensor = transf.permute(1, 2, 0)
             list_of_tensors.append(tensor)
             count +=1
         print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
         print("---------------------------")
+    print("START Transform tensor to numpy")
     X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
+    print("Finish Transform tensor to numpy")
+    print("START divide by 255")
     X_prepro = X_prepro / 255
-
+    print("Finished divide by 255")
     return X_prepro
 
 def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
