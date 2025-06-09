@@ -3,30 +3,40 @@ from PIL import Image
 import os
 import numpy as np
 import pandas as pd
+from io import BytesIO
+import requests
+
 
 from torchvision import transforms
 
 from weeds_detector.utils.padding import expand2square
+from weeds_detector.data import get_all_files_path_and_name_in_directory
+from weeds_detector.params import *
+
+from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder
+from weeds_detector.utils.images import save_image
 
 
-def preprocess_features(X, output_folder):
+def preprocess_features():
     """
-    X being the folder where the images to process are located
-    Output folder is the empty folder needed to add the preprocessed images
+    Output folder = empty folder needed to add the preprocessed images
     """
 
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
-    for image_name in os.listdir(X):
+    files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
 
-        image_path = os.path.join(X, image_name)
-        img = Image.open(image_path).convert("RGB")
+    for file_path, file_name in files_list:
 
-        new_image = expand2square(img, (0, 0, 0)).resize((128,128))
-        save_path = os.path.join(output_folder, image_name)
+        response = requests.get(file_path)
+        img = Image.open(BytesIO(response.content)).convert("RGB")
 
-        new_image.save(save_path)
+        resized_value = int(RESIZED)
+        new_image = expand2square(img, (0, 0, 0)).resize((resized_value,resized_value))
+
+        output_folder = create_folder('images_preprocessed_model1')
+        save_image(new_image, output_folder, f"preprocessed_{file_name}")
 
         transf = transform(new_image)
         tensor = transf.permute(1, 2, 0)
