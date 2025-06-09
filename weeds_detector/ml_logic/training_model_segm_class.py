@@ -1,5 +1,5 @@
 from tensorflow.keras import layers, models, Input, callbacks
-from weeds_detector.params import RESIZED
+from weeds_detector.params import *
 
 def initialize_model(max_boxes=10, num_classes=1):
     resized = int(RESIZED)
