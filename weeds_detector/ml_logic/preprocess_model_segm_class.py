@@ -161,25 +161,25 @@ def preprocess_y(number_of_bbox, image_characteristics_filename = "image_charact
             bb[0][3] = (bb[0][3] /1080) * resized
 
     for key, value in dictio.items():
-        if len(value) < 10:
-            while len(value) < 10:
+        if len(value) < number_of_bbox:
+            while len(value) < number_of_bbox:
                 value.append([[0,0,0,0],0])
-
-    y_bbox = np.zeros((2554, 10, 4))
+    number_of_images = len(dictio.keys())
+    y_bbox = np.zeros((number_of_images, number_of_bbox, 4))
 
     dataframe = pd.DataFrame(dictio)
 
-    for column in range(2554):
-            for i in range(10):
+    for column in range(number_of_images):
+            for i in range(number_of_bbox):
                 bbox, class_id = dataframe.iloc[i, column]
                 y_bbox[column, i] = bbox
 
-    y_bbox = y_bbox/128
+    y_bbox = y_bbox/resized
 
-    y_class = np.zeros((2554, 10, 1))
+    y_class = np.zeros((number_of_images, number_of_bbox, 1))
 
-    for column in range(2554):
-            for i in range(10):
+    for column in range(number_of_images):
+            for i in range(number_of_bbox):
                 bbox, class_id = dataframe.iloc[i, column]
                 y_class[column, i] = class_id
 

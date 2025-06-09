@@ -36,8 +36,8 @@ def compile_model(model):
             'bbox_output': 'mean_squared_error'
         },
         metrics = {
-            'class_output': 'precision',
-            'bbox_output': 'mean_absolute_error'
+            'class_output': ['precision'],
+            'bbox_output': ['mean_absolute_error']
         },
         optimizer = 'adam'
     )
@@ -51,7 +51,6 @@ def train_model(model,
         batch_size=32,
         patience=20,
         epochs = 100,
-        validation_data=None,
         validation_split=0.3):
 
         es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
