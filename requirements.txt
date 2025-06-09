@@ -7,4 +7,3 @@ tensorflow
 torchvision
 google-cloud-storage
 colorama
-glob

@@ -1,10 +1,9 @@
 from tensorflow.keras import layers, models, Input, callbacks
-
-import numpy as np
+from weeds_detector.params import *
 
 def initialize_model(max_boxes=10, num_classes=1):
-
-    inputs = Input(shape=(128, 128, 3))
+    resized = int(RESIZED)
+    inputs = Input(shape=(resized, resized, 3))
 
     x = layers.Conv2D(16, kernel_size=(4, 4), activation='relu')(inputs)
     #x = layers.MaxPooling2D(pool_size=(2, 2))(x)
@@ -16,7 +15,7 @@ def initialize_model(max_boxes=10, num_classes=1):
     x = layers.Conv2D(64, kernel_size=(2, 2), activation='relu')(x)
 
     x = layers.Flatten()(x)
-    x = layers.Dense(128, activation='relu')(x)
+    x = layers.Dense(resized, activation='relu')(x)
 
     # Sortie classification : max_boxes x num_classes
     class_output = layers.Dense(max_boxes * num_classes, activation='sigmoid')(x)
@@ -32,15 +31,16 @@ def initialize_model(max_boxes=10, num_classes=1):
 def compile_model(model):
 
     model.compile(
-    loss = {
-        'class_output': 'binary_crossentropy',
-        'bbox_output': 'mean_squared_error'
-    },
-    metrics = {
-        'class_output': 'precision',
-        'bbox_output': 'mean_absolute_error'
-    },
-    optimizer = 'adam')
+        loss = {
+            'class_output': 'binary_crossentropy',
+            'bbox_output': 'mean_squared_error'
+        },
+        metrics = {
+            'class_output': 'precision',
+            'bbox_output': 'mean_absolute_error'
+        },
+        optimizer = 'adam'
+    )
 
     return model
 
