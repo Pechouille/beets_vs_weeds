@@ -48,7 +48,7 @@ def create_folder(folder_name):
         client = storage.Client()
         bucket = client.get_bucket(BUCKET_NAME)
         folder_blob_name = folder_name if folder_name.endswith('/') else folder_name + '/'
-        blob = bucket.blob(folder_blob_name)
+        blob = bucket.blob(os.path.join("data", folder_blob_name))
         folder_exist = blob.exists()
         if not folder_exist:
             blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
