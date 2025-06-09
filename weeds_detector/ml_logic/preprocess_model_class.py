@@ -3,30 +3,45 @@ from PIL import Image
 import os
 import numpy as np
 import pandas as pd
+from io import BytesIO
+import requests
+
 
 from torchvision import transforms
 
 from weeds_detector.utils.padding import expand2square
+from weeds_detector.data import get_all_files_path_and_name_in_directory
+from weeds_detector.params import *
+from google.cloud import storage
+
+from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
+from weeds_detector.utils.images import save_image
 
 
-def preprocess_features(X, output_folder):
-    """
-    X being the folder where the images to process are located
-    Output folder is the empty folder needed to add the preprocessed images
-    """
+def preprocess_features():
 
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
-    for image_name in os.listdir(X):
+    files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
 
-        image_path = os.path.join(X, image_name)
-        img = Image.open(image_path).convert("RGB")
-
-        new_image = expand2square(img, (0, 0, 0)).resize((128,128))
-        save_path = os.path.join(output_folder, image_name)
-
-        new_image.save(save_path)
+    output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized_{CROPED_SIZE}/{RESIZED}x{RESIZED}')
+    
+    storage_client = storage.Client()
+    source_bucket = storage_client.bucket(BUCKET_NAME)
+    print(f"Source bucket : {source_bucket}")
+    for file_path, file_name in files_list:
+        print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+        source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+        image_path = source_blob.public_url
+        print(f"Public url : {source_bucket}")
+        response = requests.get(image_path)
+        if response.status_code == 200:
+            print(f"Response code : {response.status_code}")
+            new_image = Image.open(BytesIO(response.content)).convert("RGB")
+        else:
+            print(f"Response code | {response.status_code} : Image not found transform image")
+            new_image = transform_image(file_name, file_path, output_dir)
 
         transf = transform(new_image)
         tensor = transf.permute(1, 2, 0)
@@ -37,9 +52,10 @@ def preprocess_features(X, output_folder):
 
     y = np.zeros(len(X_prepro))
     i = -1
-    for image_name in os.listdir(X):
+
+    for file_path, file_name in files_list:
         i += 1
-        if image_name[-5] == '1':
+        if file_name[-5] == '1':
             y[i] = 1
     y = pd.Series(y)
 

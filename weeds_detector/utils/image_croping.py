@@ -11,7 +11,7 @@ from weeds_detector.utils.images import save_image, load_image
 
 def output_directory():
     """Output directory (cropped_images)"""
-    output_dir = f"preprocessed/croped_{DATA_SIZE}"
+    output_dir = f"data/croped_images/croped_{DATA_SIZE}"
     return output_dir
 
 

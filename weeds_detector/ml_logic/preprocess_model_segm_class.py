@@ -108,7 +108,6 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("---------------------------")
     count = 0
     output_dir, folder_exist = create_folder(f'images_preprocessed/full_images_resized/{RESIZED}x{RESIZED}')
-    print(output_dir)
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME)
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
@@ -116,7 +115,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
         print("---------------------------")
         if file_name in img_needed:
             if not folder_exist:
-                transform_image(file_name, file_path, output_dir)
+                new_image = transform_image(file_name, file_path, output_dir)
             elif folder_exist:
                 print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
                 source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))

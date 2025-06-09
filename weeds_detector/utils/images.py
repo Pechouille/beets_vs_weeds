@@ -31,7 +31,7 @@ def save_image(image: Image.Image, output_dir: str, output_name: str):
     elif FILE_ORIGIN == 'gcp':
         storage_client = storage.Client()
         bucket = storage_client.bucket(BUCKET_NAME)
-        blob_path = os.path.join("data", output_dir, output_name)
+        blob_path = os.path.join(output_dir, output_name)
         blob = bucket.blob(blob_path)
 
         image_bytes = BytesIO()

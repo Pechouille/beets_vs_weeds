@@ -14,6 +14,8 @@ RESIZED = os.environ.get("RESIZED", 64)
 MODEL_TARGET = os.environ.get("MODEL_TARGET")
 LOCAL_FOLDER_PATH= os.environ.get("LOCAL_FOLDER_PATH")
 CUDA_VISIBLE_DEVICES = os.environ.get("CUDA_VISIBLE_DEVICES", '-1')
+CROPED_SIZE= os.environ.get("CROPED_SIZE", "1k")
+
 ################## VALIDATIONS #################
 
 env_valid_options = dict(
