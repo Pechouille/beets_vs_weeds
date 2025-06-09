@@ -1,5 +1,6 @@
 import os
-import uuid
+import io
+import base64
 from PIL import Image
 import numpy as np
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
@@ -7,13 +8,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
-from weeds_detector.ml_logic.model import initialize_model, compile_model, evaluate_model, train_model
 
-from weeds_detector.ml_logic.preprocess import preprocess_features
-
-from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes
+from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
+from weeds_detector.utils.image_croping import crop_image
 
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
@@ -54,6 +53,7 @@ async def create_upload_file(file: UploadFile = File(...)):
         return {"error": str(e)}
 
     return FileResponse(output_path, media_type="image/png")
+
 
 # @app.get("/show/")
 # async def show_random_image_with_boxes():
