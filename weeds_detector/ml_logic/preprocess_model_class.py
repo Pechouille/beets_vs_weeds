@@ -19,18 +19,16 @@ from weeds_detector.utils.images import save_image
 
 
 def preprocess_features():
-    """
-    Output folder = empty folder needed to add the preprocessed images
-    """
 
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
 
     files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
 
-    output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized/{RESIZED}x{RESIZED}')
+    output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized_{CROPED_SIZE}/{RESIZED}x{RESIZED}')
+
     storage_client = storage.Client()
-    source_bucket = storage_client.bucket(BUCKET_NAME + f"/data")
+    source_bucket = storage_client.bucket(BUCKET_NAME)
 
     for file_path, file_name in files_list:
 
