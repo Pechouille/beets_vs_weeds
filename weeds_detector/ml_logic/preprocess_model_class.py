@@ -14,7 +14,7 @@ from weeds_detector.data import get_all_files_path_and_name_in_directory
 from weeds_detector.params import *
 from google.cloud import storage
 
-from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder
+from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
 from weeds_detector.utils.images import save_image
 
 
@@ -26,26 +26,22 @@ def preprocess_features():
     files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
 
     output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized_{CROPED_SIZE}/{RESIZED}x{RESIZED}')
-
+    
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME)
-
+    print(f"Source bucket : {source_bucket}")
     for file_path, file_name in files_list:
-
-        if not folder_exist:
-                print(f"Create image : preprocessed_{file_name} save in bucket {output_dir}")
-                response = requests.get(file_path)
-                img = Image.open(BytesIO(response.content)).convert("RGB")
-                resized_value = int(RESIZED)
-                new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
-                save_image(new_image, output_dir, f"preprocessed_{file_name}")
-
-        elif folder_exist:
-                print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
-                source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
-                image_path = source_blob.public_url
-                response = requests.get(image_path)
-                new_image = Image.open(BytesIO(response.content)).convert("RGB")
+        print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+        source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+        image_path = source_blob.public_url
+        print(f"Public url : {source_bucket}")
+        response = requests.get(image_path)
+        if response.status_code == 200:
+            print(f"Response code : {response.status_code}")
+            new_image = Image.open(BytesIO(response.content)).convert("RGB")
+        else:
+            print(f"Response code | {response.status_code} : Image not found transform image")
+            new_image = transform_image(file_name, file_path, output_dir)
 
         transf = transform(new_image)
         tensor = transf.permute(1, 2, 0)

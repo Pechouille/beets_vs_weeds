@@ -115,7 +115,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
         print("---------------------------")
         if file_name in img_needed:
             if not folder_exist:
-                transform_image(file_name, file_path, output_dir)
+                new_image = transform_image(file_name, file_path, output_dir)
             elif folder_exist:
                 print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
                 source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
