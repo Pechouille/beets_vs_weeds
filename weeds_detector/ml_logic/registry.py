@@ -4,7 +4,7 @@ from weeds_detector.params import *
 from tensorflow import keras
 from google.cloud import storage
 from colorama import Fore, Style
-import glob
+from glob import glob
 
 
 def save_model(model: keras.Model = None) -> None:
