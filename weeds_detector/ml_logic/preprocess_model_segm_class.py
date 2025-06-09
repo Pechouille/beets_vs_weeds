@@ -4,7 +4,7 @@ import os
 import shutil
 import requests
 from io import BytesIO
-from torchvision import transforms
+from tensorflow.keras.utils import img_to_array
 from PIL import Image
 from weeds_detector.params import *
 from google.cloud import storage
@@ -66,7 +66,7 @@ def copy_file(file_name, origin_dir, output_dir):
         source_bucket = storage_client.bucket(BUCKET_NAME)
         source_blob = source_bucket.blob(os.path.join(origin_dir, file_name))
         destination_blob_name = os.path.join(output_dir, file_name)
-        blob_copy = source_bucket.copy_blob(
+        source_bucket.copy_blob(
                 source_blob, source_bucket, destination_blob_name
         )
         print("✅ Images copied in the ouput_dir")
@@ -103,7 +103,6 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("3 - DATA LOADED")
     print("---------------------------")
     list_of_tensors = []
-    transform = transforms.Compose([transforms.PILToTensor()])
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
@@ -114,31 +113,23 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
         print(f"Start Preprocess : {file_name}")
         print("---------------------------")
         if file_name in img_needed:
-            if not folder_exist:
+            print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+            source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+            image_path = source_blob.public_url
+            response = requests.get(image_path)
+            if response.status_code == 200:
+                print(f"Response code : {response.status_code}")
+                new_image = Image.open(BytesIO(response.content)).convert("RGB")
+            else:
+                print(f"Response code | {response.status_code} : Image not found transform image")
                 new_image = transform_image(file_name, file_path, output_dir)
-            elif folder_exist:
-                print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
-                source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
-                image_path = source_blob.public_url
-                response = requests.get(image_path)
-                if response.status_code == 200:
-                    print(f"Response code : {response.status_code}")
-                    new_image = Image.open(BytesIO(response.content)).convert("RGB")
-                else:
-                    print(f"Response code | {response.status_code} : Image not found transform image")
-                    new_image = transform_image(file_name, file_path, output_dir)
-            transf = transform(new_image)
-            tensor = transf.permute(1, 2, 0)
-            list_of_tensors.append(tensor)
+            image = img_to_array(new_image)
+            image = image / 255.0
+            list_of_tensors.append(image)
             count +=1
         print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
         print("---------------------------")
-    print("START Transform tensor to numpy")
-    X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
-    print("Finish Transform tensor to numpy")
-    print("START divide by 255")
-    X_prepro = X_prepro / 255
-    print("Finished divide by 255")
+    X_prepro = np.stack(list_of_tensors, axis=0)
     return X_prepro
 
 def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
