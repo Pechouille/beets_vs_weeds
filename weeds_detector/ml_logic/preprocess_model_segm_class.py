@@ -99,7 +99,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
-    output_dir, folder_exist = create_folder(f'images_preprocessed/{RESIZED}x{RESIZED}')
+    output_dir, folder_exist = create_folder(f'images_preprocessed/full_images_resized/{RESIZED}x{RESIZED}')
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME + f"/data")
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
