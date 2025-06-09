@@ -148,3 +148,7 @@ def evaluate_model(
     )
 
     return metrics
+
+
+def predict(model, img):
+    return model.predict(img)
