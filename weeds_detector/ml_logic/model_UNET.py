@@ -3,16 +3,21 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, conca
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 import random
 import glob
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 
-def dice_coeff(y_true, y_pred, smooth=1):
-    intersection = tf.reduce_sum(y_true * y_pred, axis=[1,2,3])
-    union = tf.reduce_sum(y_true, axis=[1,2,3]) + tf.reduce_sum(y_pred, axis=[1,2,3])
-    dice = (2. * intersection + smooth) / (union + smooth)
-    return tf.reduce_mean(dice)
+# Setting dice coefficient to evaluate our model
+def dice_coeff(y_true, y_pred, smooth = 1):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+    intersection = tf.reduce_sum(y_true*y_pred, axis = -1)
+    union = tf.reduce_sum(y_true, axis = -1) + tf.reduce_sum(y_pred, axis = -1)
+    dice_coeff = (2*intersection+smooth) / (union + smooth)
+    return dice_coeff
 
 #Let's create a function for one step of the encoder block, so as to increase the reusability when making custom unets
 
@@ -76,43 +81,33 @@ def compile_model(model):
 
     return model
 
+def process_path(image_path, mask_path):
+    '''This methode is only used in load_dataset and shall not be used anywhere else
+    it automaically normalize the input image before inserting them in the dataset'''
+    # Chargement du fichier image
+    image = tf.io.read_file(image_path)
+    image = tf.image.decode_png(image, channels=3)  # couleur
+    image = tf.image.resize(image, [256, 256])
+    image = tf.cast(image, tf.float32) / 255.0  # normalisation [0, 1]
 
-def build_model_input_dataset(image_directory, mask_directory, image_size = 256, batch_size=8):
+    # Chargement du masque
+    mask = tf.io.read_file(mask_path)
+    mask = tf.image.decode_png(mask, channels=1)  # niveau de gris (binaire ou multiclasses)
+    mask = tf.image.resize(mask, [256, 256], method='nearest')  # nearest pour préserver les classes
+    mask = tf.cast(mask, tf.uint8)  # typiquement les masques sont des entiers (classe 0, 1, 2…)
 
+    return image, mask
 
-    # Get and obtain image and mask paths
-    image_paths = sorted([os.path.join(image_directory, fname) for fname in os.listdir(image_directory)])
-    mask_paths = sorted([os.path.join(mask_directory, fname) for fname in os.listdir(mask_directory)])
+def build_dataset(image_dir, mask_dir, batch_size=16):
+    '''Build dataset which are consumed but the train process'''
+    image_paths = sorted([os.path.join(image_dir, fname) for fname in os.listdir(image_dir)])
+    mask_paths = sorted([os.path.join(mask_dir, fname) for fname in os.listdir(mask_dir)])
 
-    def process_pair(img_path, mask_path):
-        # Load RGB images
-        image = load_img(img_path, target_size=image_size)
-        image = img_to_array(image) / 255.0  # Normalize
-
-        # Load mask a grayscale images
-        mask = load_img(mask_path, target_size=image_size, color_mode="grayscale")
-        mask = img_to_array(mask) / 255.0    #normalize
-
-        return image, mask
-
-    # Dataset Generator
-    def generator():
-        for img, msk in zip(image_paths, mask_paths):
-            yield process_pair(img, msk)
-
-    # Create dataset
-    dataset = tf.data.Dataset.from_generator(
-        generator,
-        output_types=(tf.float32, tf.float32),
-        output_shapes=(
-            tf.TensorShape([image_size, image_size, 3]),
-            tf.TensorShape([image_size, image_size, 1])
-        )
-    )
-
-    # Optimize (batch, shuffle, prefetch)
-    dataset = dataset.shuffle(100).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
+    dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
+    dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.shuffle(buffer_size=100)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
     return dataset
 
 def train_model(model,
