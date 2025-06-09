@@ -15,6 +15,11 @@ env:
   COMPUTE_ENGINE_INSTANCE_NAME: ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }}
   COMPUTE_ENGINE_MACHINE_TYPE: ${{ vars.COMPUTE_ENGINE_MACHINE_TYPE }}
   COMPUTE_ENGINE_ZONE: ${{ vars.COMPUTE_ENGINE_ZONE }}
+  DATA_SIZE: ${{ vars.DATA_SIZE }}
+  CHUNK_SIZE: ${{ vars.CHUNK_SIZE }}
+  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  BUCKET_NAME: ${{ vars.BUCKET_NAME }}
 
 jobs:
   deploy_docker:
@@ -23,26 +28,26 @@ jobs:
       group: deploy-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v4"
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - id: "auth"
-        uses: "google-github-actions/auth@v2"
+      - id: auth
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v2"
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: "Use gcloud CLI"
-        run: "gcloud info"
+      - name: Use gcloud CLI
+        run: gcloud info
 
-      - name: "Docker auth"
-        run: |-
+      - name: Docker auth
+        run: |
           gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
 
-      - name: "Verify image exists"
+      - name: Verify image exists
         run: |
           if ! gcloud artifacts docker images describe \
             ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest; then
@@ -51,7 +56,7 @@ jobs:
           fi
           echo "✅ Docker image verified in Artifact Registry"
 
-      - name: "Create or update instance"
+      - name: Create or update instance
         run: |
           if ! gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} > /dev/null 2>&1; then
             echo "🚀 Creating new instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
@@ -61,6 +66,13 @@ jobs:
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
               --container-restart-policy=always \
               --container-env=PORT=8080 \
+              --container-env=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
+              --container-env=DATA_SIZE=${{ env.DATA_SIZE }} \
+              --container-env=CHUNK_SIZE=${{ env.CHUNK_SIZE }} \
+              --container-env=FILE_ORIGIN=gcp \
+              --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
+              --container-env=GCP_REGION=${{ env.GCP_REGION }} \
+              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }}
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
               --boot-disk-size=20GB \
@@ -72,15 +84,22 @@ jobs:
             gcloud compute instances update-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
-              --container-env=PORT=8080
+              --container-env=PORT=8080 \
+              --container-env=DATA_SIZE=${{ env.DATA_SIZE }} \
+              --container-env=CHUNK_SIZE=${{ env.CHUNK_SIZE }} \
+              --container-env=FILE_ORIGIN=gcp \
+              --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
+              --container-env=GCP_REGION=${{ env.GCP_REGION }} \
+              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }} \
+              --container-env=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }}
           fi
 
-      - name: "Wait for instance to be ready"
+      - name: Wait for instance to be ready
         run: |
           echo "⏳ Waiting for instance to be ready..."
           timeout 300 bash -c 'until gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} --format="get(status)" | grep -q "RUNNING"; do sleep 10; done'
 
-      - name: "Get deployment details"
+      - name: Get deployment details
         run: |
           EXTERNAL_IP=$(gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
             --zone=${{ env.COMPUTE_ENGINE_ZONE }} \

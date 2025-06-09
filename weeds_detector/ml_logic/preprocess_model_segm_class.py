@@ -1,89 +1,173 @@
 import pandas as pd
 import numpy as np
-import json
 import os
 import shutil
+import requests
+from io import BytesIO
 from torchvision import transforms
 from PIL import Image
+from weeds_detector.params import *
+from google.cloud import storage
 
 from weeds_detector.utils.padding import expand2square
+from weeds_detector.data import get_filepath, get_json_content, get_all_files_path_and_name_in_directory, get_folderpath, get_existing_files
+from weeds_detector.utils.images import save_image
 
+def df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename):
+    file_url = get_filepath(image_characteristics_filename)
+    file_df = pd.read_csv(file_url)
+    file_filtered_df = file_df[file_df.number_items_per_picture > number_of_bbox][['id', 'filename', 'number_items_per_picture']]
 
-csv = pd.read_csv('data/csv/image_characteristics.csv')
+    return file_filtered_df
 
-images_plus_de_10 = csv[csv.number_items_per_picture > 10][['id', 'filename', 'number_items_per_picture']]
+def annotated_img_ids(splited_data):
+    annotated_ids = set(bbox["image_id"] for bbox in splited_data["annotations"])
 
-json_path = '/Users/ramoisiaux/code/Pechouille/beets_vs_weeds/data/test:val:train/json_train_set.json'
+    return annotated_ids
 
-with open(json_path, 'r') as f:
-        data = json.load(f)
+def excluded_filenames(file_filtered_df):
+    excluded_filename = set(file_filtered_df["filename"])
 
-excluded_filenames = set(images_plus_de_10['filename'])
-annotated_ids = set(img["image_id"] for img in data["annotations"])
-excluded_id = set(images_plus_de_10['id'])
+    return excluded_filename
 
+def img_needed_filenames(splited_data, excluded_filenames, annotated_img_ids):
+    filenames = []
+    for img in splited_data.get("images", []):
+        file_name = img["file_name"]
+        if file_name not in excluded_filenames and img["id"] in annotated_img_ids:
+            filenames.append(file_name)
+    img_needed = set(filenames)
+    return img_needed
 
-def preprocess_images(input_folder, output_folder, prepro_folder):
+def create_folder(folder_name):
+    if FILE_ORIGIN == 'local':
+        if not os.path.isdir(folder_name):
+            os.mkdir(folder_name)
+        return folder_name
+    elif FILE_ORIGIN == 'gcp':
+        client = storage.Client()
+        bucket = client.get_bucket(BUCKET_NAME)
+        folder_blob_name = folder_name if folder_name.endswith('/') else folder_name + '/'
+        blob = bucket.blob(os.path.join("data", folder_blob_name))
+        folder_exist = blob.exists()
+        if not folder_exist:
+            blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+        return blob.name, folder_exist
+
+def copy_file(file_name, origin_dir, output_dir):
+    if FILE_ORIGIN == 'local':
+        file_path = get_filepath(file_name)
+        dst_path = os.path.join(output_dir, file_name)
+        shutil.copy2(file_path, dst_path)
+        print("✅ Images copied in the ouput_dir")
+        return None
+    elif FILE_ORIGIN == 'gcp':
+        storage_client = storage.Client()
+        source_bucket = storage_client.bucket(BUCKET_NAME)
+        source_blob = source_bucket.blob(os.path.join(origin_dir, file_name))
+        destination_blob_name = os.path.join(output_dir, file_name)
+        blob_copy = source_bucket.copy_blob(
+                source_blob, source_bucket, destination_blob_name
+        )
+        print("✅ Images copied in the ouput_dir")
+        return None
+
+def transform_image(file_name, file_path, output_dir):
+    print(f"Create image : preprocessed_{file_name} save in bucket {output_dir}")
+    response = requests.get(file_path)
+    img = Image.open(BytesIO(response.content)).convert("RGB")
+    resized_value = int(RESIZED)
+    new_image = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
+    save_image(new_image, output_dir, f"preprocessed_{file_name}")
+    return new_image
+
+def preprocess_images(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
     """
     input folder being the folder where all images are located
     output folder is the empty folder that will contain only the images we need to preprocess
     prepro folder is the empty folder that will contain the images preprocessed
     """
+    print("1 - START PREPROCESS IMAGE")
+    print("---------------------------")
 
-    file_names = set(img["file_name"] for img in data.get("images", []) if img["file_name"] not in excluded_filenames and img["id"] in annotated_ids)
+    print("2 - START LOAD DATA")
+    print("---------------------------")
+    splited_data = get_json_content(data_split_filename)
 
-    for image_name in os.listdir(input_folder):
-        if f'{image_name}' in file_names:
-            src_path = os.path.join(input_folder, image_name)
-            dst_path = os.path.join(output_folder, image_name)
-            shutil.copy2(src_path, dst_path)
+    file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
 
+    excluded_filename = excluded_filenames(file_filtered_df)
+    annotated_ids = annotated_img_ids(splited_data)
+
+    img_needed = img_needed_filenames(splited_data, excluded_filename, annotated_ids)
+    print("3 - DATA LOADED")
+    print("---------------------------")
     list_of_tensors = []
     transform = transforms.Compose([transforms.PILToTensor()])
-
-    for image_name in os.listdir(output_folder):
-
-        image_path = os.path.join(output_folder, image_name)
-        img = Image.open(image_path).convert("RGB")
-
-        new_image = expand2square(img, (0, 0, 0)).resize((128,128))
-        save_path = os.path.join(prepro_folder, image_name)
-
-        new_image.save(save_path)
-
-        transf = transform(new_image)
-        tensor = transf.permute(1, 2, 0)
-        list_of_tensors.append(tensor)
-
+    print("4 - START PREPROCESS EACH IMAGES")
+    print("---------------------------")
+    count = 0
+    output_dir, folder_exist = create_folder(f'images_preprocessed/full_images_resized/{RESIZED}x{RESIZED}')
+    storage_client = storage.Client()
+    source_bucket = storage_client.bucket(BUCKET_NAME)
+    for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
+        print(f"Start Preprocess : {file_name}")
+        print("---------------------------")
+        if file_name in img_needed:
+            if not folder_exist:
+                new_image = transform_image(file_name, file_path, output_dir)
+            elif folder_exist:
+                print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+                source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+                image_path = source_blob.public_url
+                response = requests.get(image_path)
+                if response.status_code == 200:
+                    print(f"Response code : {response.status_code}")
+                    new_image = Image.open(BytesIO(response.content)).convert("RGB")
+                else:
+                    print(f"Response code | {response.status_code} : Image not found transform image")
+                    new_image = transform_image(file_name, file_path, output_dir)
+            transf = transform(new_image)
+            tensor = transf.permute(1, 2, 0)
+            list_of_tensors.append(tensor)
+            count +=1
+        print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
+        print("---------------------------")
+    print("START Transform tensor to numpy")
     X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
+    print("Finish Transform tensor to numpy")
+    print("START divide by 255")
     X_prepro = X_prepro / 255
-
+    print("Finished divide by 255")
     return X_prepro
 
-def preprocess_y():
+def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
+
+    splited_data = get_json_content(data_split_filename)
+
+    file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
 
     dictio = {}
 
-    excluded_id = set(images_plus_de_10['id'])
+    excluded_id = set(file_filtered_df['id'])
 
-
-    for dict in data['annotations']:
+    for dict in splited_data['annotations']:
         if dict['image_id'] not in excluded_id:
             dictio[dict['image_id']] = []
 
-    for dict in data['annotations']:
+    for dict in splited_data['annotations']:
         lst = []
         lst.append(dict['bbox'])
         lst.append(dict['category_id'])
-        if dict['image_id'] not in images_plus_de_10['id']:
+        if dict['image_id'] not in file_filtered_df['id']:
             dictio[dict['image_id']].append(lst)
-
+    resized = int(RESIZED)
     for key, value in dictio.items():
         for bb in value:
-            bb[0][0] = (bb[0][0] /1920) * 128
-            bb[0][2] = (bb[0][2] /1920) * 128
-            bb[0][1] = (bb[0][1] /1080) * 128
-            bb[0][3] = (bb[0][3] /1080) * 128
+            bb[0][0] = (bb[0][0] /1920) * resized
+            bb[0][2] = (bb[0][2] /1920) * resized
+            bb[0][1] = (bb[0][1] /1080) * resized
+            bb[0][3] = (bb[0][3] /1080) * resized
 
     for key, value in dictio.items():
         if len(value) < 10:
