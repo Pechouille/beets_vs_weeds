@@ -153,13 +153,13 @@ def preprocess_y(number_of_bbox, image_characteristics_filename = "image_charact
         lst.append(dict['category_id'])
         if dict['image_id'] not in file_filtered_df['id']:
             dictio[dict['image_id']].append(lst)
-
+    resized = int(RESIZED)
     for key, value in dictio.items():
         for bb in value:
-            bb[0][0] = (bb[0][0] /1920) * 128
-            bb[0][2] = (bb[0][2] /1920) * 128
-            bb[0][1] = (bb[0][1] /1080) * 128
-            bb[0][3] = (bb[0][3] /1080) * 128
+            bb[0][0] = (bb[0][0] /1920) * resized
+            bb[0][2] = (bb[0][2] /1920) * resized
+            bb[0][1] = (bb[0][1] /1080) * resized
+            bb[0][3] = (bb[0][3] /1080) * resized
 
     for key, value in dictio.items():
         if len(value) < 10:
