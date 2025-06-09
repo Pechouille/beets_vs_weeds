@@ -44,3 +44,15 @@ def preprocess_features(X, output_folder):
     y = pd.Series(y)
 
     return X_prepro, y
+
+def preprocess_single_image(img: Image.Image) -> np.ndarray:
+    transform = transforms.PILToTensor()
+
+    # Adapté de ta fonction expand2square + resize(128,128)
+    new_image = expand2square(img, (0, 0, 0)).resize((128, 128))
+
+    tensor = transform(new_image).permute(1, 2, 0).numpy()  # (H,W,C)
+    tensor = tensor / 255.0
+    tensor = np.expand_dims(tensor, axis=0)  # batch dimension
+
+    return tensor

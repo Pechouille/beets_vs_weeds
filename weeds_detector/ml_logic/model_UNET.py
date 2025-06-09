@@ -5,17 +5,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import random
+from tensorflow.keras.losses import BinaryCrossentropy
 
 
-
-
-
-
-def dice_coeff(y_true, y_pred, smooth=1):
+def dice_coeff(y_true, y_pred, smooth=1e-6):
+    y_true = tf.cast(y_true, tf.float32)  # Conversion obligatoire
+    y_pred = tf.clip_by_value(y_pred, 0., 1.)
     intersection = tf.reduce_sum(y_true * y_pred, axis=[1,2,3])
     union = tf.reduce_sum(y_true, axis=[1,2,3]) + tf.reduce_sum(y_pred, axis=[1,2,3])
     dice = (2. * intersection + smooth) / (union + smooth)
     return tf.reduce_mean(dice)
+
+
+def dice_loss(y_true, y_pred, smooth=1e-6):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.clip_by_value(y_pred, 0., 1.)
+
+    intersection = tf.reduce_sum(y_true * y_pred, axis=[1,2,3])
+    union = tf.reduce_sum(y_true, axis=[1,2,3]) + tf.reduce_sum(y_pred, axis=[1,2,3])
+    dice = (2. * intersection + smooth) / (union + smooth)
+    return 1 - tf.reduce_mean(dice)
+
+def combined_loss(y_true, y_pred):
+    bce = BinaryCrossentropy()(y_true, y_pred)
+    dice = dice_loss(y_true, y_pred)
+    return 0.5 * bce + 0.5 * dice
 
 #Let's create a function for one step of the encoder block, so as to increase the reusability when making custom unets
 
@@ -71,9 +85,10 @@ def initialize_model():
 
 def compile_model(model):
 
-    model.compile(loss = 'binary_crossentropy',
-            optimizer = 'adam',
-            metrics = ['accuracy', dice_coeff])
+    model.compile(optimizer = 'adam',
+            loss=combined_loss,
+            metrics=[dice_coeff]
+    )
 
     return model
 
@@ -91,6 +106,22 @@ def train_model(model,
                         epochs=50,
                         callbacks=[early_stopping])
     return model, history
+
+def plot_history(history):
+    plt.figure(figsize=(12,4))
+    plt.subplot(1,2,1)
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history.get('val_loss'), label='val_loss')
+    plt.legend()
+    plt.title("Loss")
+
+    plt.subplot(1,2,2)
+    plt.plot(history.history['dice_coeff'], label='dice')
+    plt.plot(history.history.get('val_dice_coeff'), label='val_dice')
+    plt.legend()
+    plt.title("Dice Coefficient")
+
+    plt.show()
 
 def evaluate_model(
         model,
