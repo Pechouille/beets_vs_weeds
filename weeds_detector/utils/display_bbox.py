@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import xml.etree.ElementTree as ET
 import numpy as np
+import os
 
 
 def load_bounding_boxes(xml_file):
@@ -54,3 +55,27 @@ def display_image_with_bounding_boxes(image_path):
         axs.add_patch(rect)
 
     plt.show()
+
+def api_display_image_with_bounding_boxes(image_path, save_path):
+    '''Crée une image avec les bounding boxes et la sauvegarde dans save_path'''
+
+    fig, axs = plt.subplots(1, 1, figsize=(20, 15))
+    img = np.asarray(Image.open(image_path))
+    axs.imshow(img)
+
+    # Le fichier XML correspondant est dans data/all/ avec la même base de nom
+    base_name = os.path.splitext(os.path.basename(image_path))[0]
+    xml_file_path = f"data/all/{base_name}.xml"
+
+    bounding_boxes = load_bounding_boxes(xml_file_path)
+
+    for box in bounding_boxes:
+        rect = patches.Rectangle(
+            (box.x_min, box.y_min), box.x_len, box.y_len,
+            linewidth=2, edgecolor=box.color, facecolor=box.color, alpha=0.3
+        )
+        axs.add_patch(rect)
+
+    plt.axis('off')
+    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)

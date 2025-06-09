@@ -3,21 +3,33 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, conca
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 
 import random
-import glob
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.losses import BinaryCrossentropy
 
 
-# Setting dice coefficient to evaluate our model
-def dice_coeff(y_true, y_pred, smooth = 1):
+def dice_coeff(y_true, y_pred, smooth=1e-6):
+    y_true = tf.cast(y_true, tf.float32)  # Conversion obligatoire
+    y_pred = tf.clip_by_value(y_pred, 0., 1.)
+    intersection = tf.reduce_sum(y_true * y_pred, axis=[1,2,3])
+    union = tf.reduce_sum(y_true, axis=[1,2,3]) + tf.reduce_sum(y_pred, axis=[1,2,3])
+    dice = (2. * intersection + smooth) / (union + smooth)
+    return tf.reduce_mean(dice)
+
+
+def dice_loss(y_true, y_pred, smooth=1e-6):
     y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.cast(y_pred, tf.float32)
-    intersection = tf.reduce_sum(y_true*y_pred, axis = -1)
-    union = tf.reduce_sum(y_true, axis = -1) + tf.reduce_sum(y_pred, axis = -1)
-    dice_coeff = (2*intersection+smooth) / (union + smooth)
-    return dice_coeff
+    y_pred = tf.clip_by_value(y_pred, 0., 1.)
+
+    intersection = tf.reduce_sum(y_true * y_pred, axis=[1,2,3])
+    union = tf.reduce_sum(y_true, axis=[1,2,3]) + tf.reduce_sum(y_pred, axis=[1,2,3])
+    dice = (2. * intersection + smooth) / (union + smooth)
+    return 1 - tf.reduce_mean(dice)
+
+def combined_loss(y_true, y_pred):
+    bce = BinaryCrossentropy()(y_true, y_pred)
+    dice = dice_loss(y_true, y_pred)
+    return 0.5 * bce + 0.5 * dice
 
 #Let's create a function for one step of the encoder block, so as to increase the reusability when making custom unets
 
@@ -40,9 +52,6 @@ def decoder_block(filters, connections, inputs):
   x = Conv2D(filters, kernel_size = (2,2), padding = 'same', activation = 'relu')(skip_connections)
   x = Conv2D(filters, kernel_size = (2,2), padding = 'same', activation = 'relu')(x)
   return x
-
-
-
 
 def initialize_model():
 
@@ -73,56 +82,46 @@ def initialize_model():
 
     return model
 
+
 def compile_model(model):
 
-    model.compile(loss = 'binary_crossentropy',
-            optimizer = 'adam',
-            metrics = ['accuracy', dice_coeff])
+    model.compile(optimizer = 'adam',
+            loss=combined_loss,
+            metrics=[dice_coeff]
+    )
 
     return model
 
-def process_path(image_path, mask_path):
-    '''This methode is only used in load_dataset and shall not be used anywhere else
-    it automaically normalize the input image before inserting them in the dataset'''
-    # Chargement du fichier image
-    image = tf.io.read_file(image_path)
-    image = tf.image.decode_png(image, channels=3)  # couleur
-    image = tf.image.resize(image, [256, 256])
-    image = tf.cast(image, tf.float32) / 255.0  # normalisation [0, 1]
-
-    # Chargement du masque
-    mask = tf.io.read_file(mask_path)
-    mask = tf.image.decode_png(mask, channels=1)  # niveau de gris (binaire ou multiclasses)
-    mask = tf.image.resize(mask, [256, 256], method='nearest')  # nearest pour préserver les classes
-    mask = tf.cast(mask, tf.uint8)  # typiquement les masques sont des entiers (classe 0, 1, 2…)
-
-    return image, mask
-
-def build_dataset(image_dir, mask_dir, batch_size=16):
-    '''Build dataset which are consumed but the train process'''
-    image_paths = sorted([os.path.join(image_dir, fname) for fname in os.listdir(image_dir)])
-    mask_paths = sorted([os.path.join(mask_dir, fname) for fname in os.listdir(mask_dir)])
-
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
-    dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
-    dataset = dataset.shuffle(buffer_size=100)
-    dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
-    return dataset
-
 def train_model(model,
         dataset,
-        batch_size=64,
+        batch_size=32,
         patience=20,
         validation_data=None,
         validation_split=0.3):
 
-    #Defining early stopping to regularize the model and prevent overfitting
-    early_stopping = callbacks.EarlyStopping(monitor = 'val_loss', patience = patience, restore_best_weights = True)
+    early_stopping = callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
 
-    #Training the model with 50 epochs (it will stop training in between because of early stopping)
-    history = model.fit(dataset, epochs = 1, batch_size = batch_size, callbacks = [early_stopping])
+    history = model.fit(dataset,
+                        validation_data=validation_data,
+                        epochs=50,
+                        callbacks=[early_stopping])
     return model, history
+
+def plot_history(history):
+    plt.figure(figsize=(12,4))
+    plt.subplot(1,2,1)
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history.get('val_loss'), label='val_loss')
+    plt.legend()
+    plt.title("Loss")
+
+    plt.subplot(1,2,2)
+    plt.plot(history.history['dice_coeff'], label='dice')
+    plt.plot(history.history.get('val_dice_coeff'), label='val_dice')
+    plt.legend()
+    plt.title("Dice Coefficient")
+
+    plt.show()
 
 def evaluate_model(
         model,
@@ -148,7 +147,3 @@ def evaluate_model(
     )
 
     return metrics
-
-
-def predict(model, img):
-    return model.predict(img)
