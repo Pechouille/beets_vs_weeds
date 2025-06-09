@@ -103,6 +103,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("3 - DATA LOADED")
     print("---------------------------")
     list_of_tensors = []
+    filenames_ordered = []
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
@@ -126,13 +127,14 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
             image = img_to_array(new_image)
             image = image / 255.0
             list_of_tensors.append(image)
+            filenames_ordered.append(file_name)
             count +=1
         print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
         print("---------------------------")
     X_prepro = np.stack(list_of_tensors, axis=0)
-    return X_prepro
+    return X_prepro, filenames_ordered
 
-def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
+def preprocess_y(filenames_ordered, number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
 
     splited_data = get_json_content(data_split_filename)
 
@@ -152,35 +154,42 @@ def preprocess_y(number_of_bbox, image_characteristics_filename = "image_charact
         lst.append(dict['category_id'])
         if dict['image_id'] not in file_filtered_df['id']:
             dictio[dict['image_id']].append(lst)
+
     resized = int(RESIZED)
     for key, value in dictio.items():
         for bb in value:
-            bb[0][0] = (bb[0][0] /1920) * resized
-            bb[0][2] = (bb[0][2] /1920) * resized
-            bb[0][1] = (bb[0][1] /1080) * resized
-            bb[0][3] = (bb[0][3] /1080) * resized
+            bb[0][0] = (bb[0][0] / 1920) * resized
+            bb[0][2] = (bb[0][2] / 1920) * resized
+            bb[0][1] = (bb[0][1] / 1080) * resized
+            bb[0][3] = (bb[0][3] / 1080) * resized
 
     for key, value in dictio.items():
         if len(value) < number_of_bbox:
             while len(value) < number_of_bbox:
-                value.append([[0,0,0,0],0])
-    number_of_images = len(dictio.keys())
+                value.append([[0, 0, 0, 0], 0])
+
+    number_of_images = len(filenames_ordered)
     y_bbox = np.zeros((number_of_images, number_of_bbox, 4))
-
-    dataframe = pd.DataFrame(dictio)
-
-    for column in range(number_of_images):
-            for i in range(number_of_bbox):
-                bbox, class_id = dataframe.iloc[i, column]
-                y_bbox[column, i] = bbox
-
-    y_bbox = y_bbox/resized
-
     y_class = np.zeros((number_of_images, number_of_bbox, 1))
 
-    for column in range(number_of_images):
-            for i in range(number_of_bbox):
-                bbox, class_id = dataframe.iloc[i, column]
-                y_class[column, i] = class_id
+    filename_to_id = {img["file_name"]: img["id"] for img in splited_data["images"]}
 
-    return y_bbox, y_class
+    for idx, fname in enumerate(filenames_ordered):
+        image_id = filename_to_id[fname]
+        for i in range(number_of_bbox):
+            bbox, class_id = dictio[image_id][i]
+            y_bbox[idx, i] = bbox
+            y_class[idx, i] = class_id
+
+    y_bbox = y_bbox / resized
+
+    #Creation of the mask
+    mask = np.zeros((number_of_images, number_of_bbox, 1), dtype=np.float32)
+    for idx, fname in enumerate(filenames_ordered):
+        image_id = filename_to_id[fname]
+        for i in range(number_of_bbox):
+            bbox, class_id = dictio[image_id][i]
+            if bbox != [0, 0, 0, 0] or class_id != 0:
+                mask[idx, i] = 1.0
+
+    return y_bbox, y_class, mask
