@@ -7,3 +7,8 @@ tensorflow
 torchvision
 google-cloud-storage
 colorama
+fastapi
+uvicorn
+matplotlib
+logger
+python-multipart

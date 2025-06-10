@@ -1,10 +1,12 @@
 from tensorflow.keras import Sequential, Input, layers, callbacks
+from weeds_detector.params import *
 import numpy as np
 
 def initialize_model():
     """Initialize the Neural Network with random weights"""
     model = Sequential()
-    model.add(Input(shape=(128, 128, 3)))
+    resized = int(RESIZED)
+    model.add(Input(shape=(resized, resized, 3)))
 
     ### First Convolution & MaxPooling
     model.add(layers.Conv2D(16, kernel_size=(4, 4), activation='relu'))

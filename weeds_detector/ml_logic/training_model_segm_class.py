@@ -29,15 +29,14 @@ def initialize_model(max_boxes=10, num_classes=1):
     return model
 
 def compile_model(model):
-
     model.compile(
         loss = {
             'class_output': 'binary_crossentropy',
             'bbox_output': 'mean_squared_error'
         },
         metrics = {
-            'class_output': 'precision',
-            'bbox_output': 'mean_absolute_error'
+            'class_output': ['precision'],
+            'bbox_output': ['mean_absolute_error']
         },
         optimizer = 'adam'
     )
@@ -48,19 +47,22 @@ def train_model(model,
         X,
         y_class,
         y_bbox,
+        mask,
         batch_size=32,
         patience=20,
         epochs = 100,
-        validation_data=None,
         validation_split=0.3):
 
-        es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
+    es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
 
-        history = model.fit(X,
-                    {'class_output': y_class,'bbox_output': y_bbox},
-                    epochs = epochs,
-                    batch_size = batch_size,
-                    validation_split = validation_split,
-                    callbacks=[es])
+    history = model.fit(
+        X,
+        {'class_output': y_class, 'bbox_output': y_bbox},
+        sample_weight={'class_output': mask, 'bbox_output': mask},
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_split=validation_split,
+        callbacks=[es]
+    )
 
-        return model, history
+    return model, history

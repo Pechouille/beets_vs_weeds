@@ -7,3 +7,7 @@ numpy
 tensorflow
 torchvision
 google-cloud-storage
+fastapi
+uvicorn
+logger
+python-multipart
