@@ -147,3 +147,10 @@ def evaluate_model(
     )
 
     return metrics
+
+def predict(model, image_path):
+    image = tf.io.read_file(image_path)
+    image = tf.image.decode_png(image, channels=3)  # couleur
+    image = tf.image.resize(image, [256, 256])
+    image = tf.cast(image, tf.float32) / 255.0  # normalisation [0, 1]
+    return model.predict(image)
