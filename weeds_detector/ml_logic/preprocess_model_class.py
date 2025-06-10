@@ -7,7 +7,7 @@ from io import BytesIO
 import requests
 
 from tensorflow.keras.utils import img_to_array
-e
+
 from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_all_files_path_and_name_in_directory
 from weeds_detector.params import *

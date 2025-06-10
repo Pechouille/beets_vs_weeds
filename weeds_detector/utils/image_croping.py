@@ -1,5 +1,5 @@
 import time
-import logger
+from .logger import logger
 from PIL import Image
 import pandas as pd
 from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content, get_existing_files

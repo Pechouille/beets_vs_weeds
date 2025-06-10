@@ -9,3 +9,4 @@ google-cloud-storage
 colorama
 fastapi
 uvicorn
+python-multipart
