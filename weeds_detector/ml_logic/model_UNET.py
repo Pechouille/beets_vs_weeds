@@ -1,18 +1,20 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 from tensorflow.keras import Input, callbacks, Model
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, concatenate
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.datasets import Dataset
-from tensorflow import cast, clip_by_value, reduce_sum, reduce_mean, float32
-from tensorflow import Tensor
+from tensorflow.image import resize, decode_png
+from tensorflow.io import read_file
+from tensorflow.data.Dataset import from_tensor_slices
+from tensorflow.data import AUTOTUNE
+from tensorflow import Tensor, cast, clip_by_value, reduce_sum, reduce_mean, float32, uint8
 from typing import Tuple
 
 from weeds_detector.params import RESIZED
-
-
 
 def dice_coeff(y_true: Tensor, y_pred: Tensor, smooth: float = 1e-6) -> float:
     """
@@ -33,7 +35,6 @@ def dice_coeff(y_true: Tensor, y_pred: Tensor, smooth: float = 1e-6) -> float:
     dice = (2. * intersection + smooth) / (union + smooth)
 
     return reduce_mean(dice)
-
 
 def dice_loss(y_true: Tensor, y_pred: Tensor, smooth: float = 1e-6) -> Tensor:
     """
@@ -78,7 +79,6 @@ def combined_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
     return 0.5 * bce + 0.5 * dice
 
 #Let's create a function for one step of the encoder block, so as to increase the reusability when making custom unets
-
 def encoder_block(filters: int, inputs: Tensor) -> Tuple[Tensor, Tensor]:
     """
     Encoder block for the U-Net model.
@@ -173,7 +173,6 @@ def initialize_model() -> Model:
     model = Model(inputs=inputs, outputs=outputs, name='Unet')
     return model
 
-
 def compile_model(model: Model) -> Model:
     """
     Compile the model.
@@ -188,6 +187,37 @@ def compile_model(model: Model) -> Model:
                   loss=combined_loss,
                   metrics=[dice_coeff])
     return model
+
+def process_path(image_path: str, mask_path: str):
+    '''This methode is only used in load_dataset and shall not be used anywhere else
+    it automaically normalize the input image before inserting them in the dataset'''
+    # Chargement du fichier image
+    image_size = int(RESIZED)
+    image = read_file(image_path)
+    image = decode_png(image, channels=3)  # couleur
+    image = resize(image, [image_size, image_size])
+    image = cast(image, float32) / 255.0  # normalisation [0, 1]
+
+    # Chargement du masque
+    mask = read_file(mask_path)
+    mask = decode_png(mask, channels=1)  # niveau de gris (binaire ou multiclasses)
+    mask = resize(mask, [image_size, image_size], method='nearest')  # nearest pour préserver les classes
+    mask = cast(mask, uint8)  # typiquement les masques sont des entiers (classe 0, 1, 2…)
+
+    return image, mask
+
+def build_dataset(image_dir, mask_dir, batch_size=16):
+    '''Build dataset which are consumed but the train process'''
+    image_paths = sorted([os.path.join(image_dir, fname) for fname in os.listdir(image_dir)])
+    mask_paths = sorted([os.path.join(mask_dir, fname) for fname in os.listdir(mask_dir)])
+
+    dataset = from_tensor_slices((image_paths, mask_paths))
+    dataset = dataset.map(process_path, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.shuffle(buffer_size=100)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(AUTOTUNE)
+    return dataset
+
 
 def train_model(model: Model,
                 dataset: Dataset,
@@ -259,3 +289,22 @@ def evaluate_model(
     )
 
     return metrics
+
+def predict(model: Model, image_path: str, image_size: int):
+    """
+    Predicts the mask for a given image using the provided model.
+
+    Args:
+        model (Model): The trained model used for prediction.
+        image_path (str): The file path to the input image.
+        image_size (int): The size to which the image should be resized.
+
+    Returns:
+        np.ndarray: The predicted mask for the input image.
+    """
+
+    image = read_file(image_path)
+    image = decode_png(image, channels=3)  # couleur
+    image = resize(image, [image_size, image_size])
+    image = cast(image, float32) / 255.0  # normalisation [0, 1]
+    return model.predict(image)
