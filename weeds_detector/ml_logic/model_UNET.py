@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.image import resize, decode_png
 from tensorflow.io import read_file
 from tensorflow.data import Dataset, AUTOTUNE
-from tensorflow import Tensor, cast, clip_by_value, reduce_sum, reduce_mean, float32, uint8
+from tensorflow import Tensor, cast, clip_by_value, reduce_sum, reduce_mean, expand_dims, float32, uint8
 from typing import Tuple
 
 from weeds_detector.params import RESIZED
@@ -305,5 +305,5 @@ def predict_model(model: Model, image_path: str, image_size: int):
     image = decode_png(image, channels=3)  # couleur
     image = resize(image, [image_size, image_size])
     image = cast(image, float32) / 255.0  # normalisation [0, 1]
-
+    image = expand_dims(image, axis=0)
     return model.predict(image)
