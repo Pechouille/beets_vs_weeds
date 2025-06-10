@@ -52,8 +52,8 @@ jobs:
             --allow-unauthenticated \
             --port 8080 \
             --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }}" \
-            --memory=20Gi \
-            --cpu=1 \
+            --memory=12Gi \
+            --cpu=4 \
             --max-instances=10 \
             --timeout=3600 \
             --concurrency=80
