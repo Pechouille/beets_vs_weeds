@@ -4,7 +4,7 @@ import os
 import shutil
 import requests
 from io import BytesIO
-from tensorflow.keras.utils import img_to_array
+from tensorflow.keras.utils import img_to_array, save_img
 from PIL import Image
 from weeds_detector.params import *
 from google.cloud import storage
@@ -141,8 +141,9 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
 
     X_prepro = np.stack(list_of_tensors, axis=0)
 
-    print("5 - PREPROCESS OF EACH IMAGES DONE")
-    
+
+    print("5 - PREPROCESS OF EACH IMAGE DONE")
+
     return X_prepro, filenames_ordered
 
 def preprocess_y(filenames_ordered, number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
