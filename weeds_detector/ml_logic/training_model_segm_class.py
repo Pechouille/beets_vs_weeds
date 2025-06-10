@@ -29,7 +29,6 @@ def initialize_model(max_boxes=10, num_classes=1):
     return model
 
 def compile_model(model):
-
     model.compile(
         loss = {
             'class_output': 'binary_crossentropy',
@@ -54,16 +53,16 @@ def train_model(model,
         epochs = 100,
         validation_split=0.3):
 
-        es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
+    es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
 
-        history = model.fit(
-            X,
-            {'class_output': y_class, 'bbox_output': y_bbox},
-            sample_weight={'class_output': mask, 'bbox_output': mask},
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_split=validation_split,
-            callbacks=[es]
-        )
+    history = model.fit(
+        X,
+        {'class_output': y_class, 'bbox_output': y_bbox},
+        sample_weight={'class_output': mask, 'bbox_output': mask},
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_split=validation_split,
+        callbacks=[es]
+    )
 
-        return model, history
+    return model, history

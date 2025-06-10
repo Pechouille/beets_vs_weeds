@@ -5,7 +5,6 @@ import pandas as pd
 from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content, get_existing_files
 from weeds_detector.params import *
 from requests.exceptions import MissingSchema
-from weeds_detector.utils.logger import setup_logging
 from weeds_detector.utils.images import save_image, load_image
 
 
@@ -56,13 +55,13 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
         image_dir (list): Directory containing the input images.
         output_dir (str): Directory where cropped images will be saved.
     """
-    logger.info(f"Starting crop processing for {len(data['annotations'])} annotations")
-    logger.info(f"Output directory: {output_dir}")
-    logger.info(f"File origin: {FILE_ORIGIN}")
+    print(f"Starting crop processing for {len(data['annotations'])} annotations")
+    print(f"Output directory: {output_dir}")
+    print(f"File origin: {FILE_ORIGIN}")
 
     # Get existing crops to avoid reprocessing
     existing_crops = get_existing_files(output_dir)
-    logger.info(f"Found {len(existing_crops)} existing crops to skip")
+    print(f"Found {len(existing_crops)} existing crops to skip")
 
     count = 0
     total_count = len(existing_crops)
@@ -77,7 +76,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     ]
 
     total_annotations = len(annotations)
-    logger.info(f"Processing {total_annotations} valid annotations")
+    print(f"Processing {total_annotations} valid annotations")
 
     start_time = time.time()
     existing_crops = get_existing_files(output_dir)
@@ -93,7 +92,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
         # Skip if already processed
         if output_name in existing_crops:
             skipped_count += 1
-            logger.info(f"Skipped {output_name} already processed crops")
+            print(f"Skipped {output_name} already processed crops")
             continue
 
         try:
@@ -106,33 +105,31 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
             total_count += 1
             elapsed_time = time.time() - start_time
             rate = count / elapsed_time if elapsed_time > 0 else 0
-            logger.info(f"✅ {count} | {total_count} | Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
+            print(f"✅ {count} | {total_count} | Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
 
         except (FileNotFoundError, MissingSchema) as e:
-            logger.error(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
+            print(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
 
     # Final summary
     elapsed_time = time.time() - start_time
     rate = count / elapsed_time if elapsed_time > 0 else 0
 
-    logger.info(f"🎉 PROCESSING COMPLETE!")
-    logger.info(f"✅ Successfully processed: {count} crops")
-    logger.info(f"⏭️  Skipped (already processed): {skipped_count} crops")
-    logger.info(f"❌ Errors encountered: {error_count} crops")
-    logger.info(f"⏱️  Total time: {elapsed_time:.2f} seconds")
-    logger.info(f"📊 Processing rate: {rate:.2f} crops/second")
-    logger.info(f"📁 Output directory: {output_dir}")
+    print(f"🎉 PROCESSING COMPLETE!")
+    print(f"✅ Successfully processed: {count} crops")
+    print(f"⏭️  Skipped (already processed): {skipped_count} crops")
+    print(f"❌ Errors encountered: {error_count} crops")
+    print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
+    print(f"📊 Processing rate: {rate:.2f} crops/second")
+    print(f"📁 Output directory: {output_dir}")
 
 
 def main(set_name: str):
     """Main execution function"""
-    global logger
-    logger = setup_logging()
 
     try:
-        logger.info("=" * 60)
-        logger.info("STARTING IMAGE CROPPING PROCESS")
-        logger.info("=" * 60)
+        print("=" * 60)
+        print("STARTING IMAGE CROPPING PROCESS")
+        print("=" * 60)
 
         # Load data
         csv_path, data = load_data(set_name)
@@ -142,18 +139,18 @@ def main(set_name: str):
         # Get image directories (assuming this comes from your params)
         image_dir = ["all"]  # You'll need to set this based on your setup
 
-        logger.info(f"Loaded {len(data['annotations'])} annotations")
-        logger.info(f"Loaded {len(id_to_filename)} image mappings")
+        print(f"Loaded {len(data['annotations'])} annotations")
+        print(f"Loaded {len(id_to_filename)} image mappings")
 
         # Start processing
         crop_annotations(data, id_to_filename, image_dir, output_dir)
 
-        logger.info("=" * 60)
-        logger.info("IMAGE CROPPING PROCESS COMPLETED")
-        logger.info("=" * 60)
+        print("=" * 60)
+        print("IMAGE CROPPING PROCESS COMPLETED")
+        print("=" * 60)
 
     except Exception as e:
-        logger.error(f"Fatal error in main process: {e}")
+        print(f"Fatal error in main process: {e}")
         raise
 
 
