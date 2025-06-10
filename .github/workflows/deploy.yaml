@@ -6,6 +6,18 @@ on:
     workflows: ["Build and Push to Artifact Registry"]
     types:
       - completed
+env:
+  PROJECT_ID: ${{ env.PROJECT_ID }}
+  ARTIFACT_REGION: ${{ env.ARTIFACT_REGION }}
+  ARTIFACT_REGISTRY: ${{ env.ARTIFACT_REGISTRY }}
+  ARTIFACT_IMAGE_NAME: ${{ env.ARTIFACT_IMAGE_NAME }}
+  COMPUTE_ENGINE_INSTANCE_NAME: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}
+  COMPUTE_ENGINE_ZONE: ${{ env.COMPUTE_ENGINE_ZONE }}
+  COMPUTE_ENGINE_MACHINE_TYPE: ${{ env.COMPUTE_ENGINE_MACHINE_TYPE }}
+  GCP_REGION: ${{ env.GCP_REGION }}
+  DATA_SIZE: ${{ env.DATA_SIZE }}
+  CHUNK_SIZE: ${{ env.CHUNK_SIZE }}
+  SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
 
 jobs:
   deploy_docker:
@@ -43,7 +55,7 @@ jobs:
 
       - name: Example Step
         run: |
-          echo "Project ID: ${{ env.PROJECT_ID }}"
+          echo "Project ID: $PROJECT_ID"
           echo "Artifact Region: ${{ env.ARTIFACT_REGION }}"
           echo "Artifact Registry: ${{ env.ARTIFACT_REGISTRY }}"
           echo "Artifact Image Name: ${{ env.ARTIFACT_IMAGE_NAME }}"
