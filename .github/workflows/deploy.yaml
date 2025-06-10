@@ -24,19 +24,19 @@ jobs:
           - name: PORT
             value: "8080"
           - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
+            value: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           - name: DATA_SIZE
-            value: "${{ env.DATA_SIZE }}"
+            value: ${{ env.DATA_SIZE }}
           - name: CHUNK_SIZE
-            value: "${{ env.CHUNK_SIZE }}"
+            value: ${{ env.CHUNK_SIZE }}
           - name: FILE_ORIGIN
-            value: "gcp"
+            value: gcp
           - name: GCP_PROJECT
-            value: "${{ env.GCP_PROJECT }}"
+            value: ${{ env.GCP_PROJECT }}
           - name: GCP_REGION
-            value: "${{ env.GCP_REGION }}"
+            value: ${{ env.GCP_REGION }}
           - name: BUCKET_NAME
-            value: "${{ env.BUCKET_NAME }}"
+            value: ${{ env.BUCKET_NAME }}
           EOF
 
       - id: auth
