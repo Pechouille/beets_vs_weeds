@@ -22,3 +22,15 @@ model, history = train_model(
 )
 
 save_model(model)
+
+model, history = train_model(
+    model,
+    X_prepro,
+    y_class,
+    y_bbox,
+    batch_size=32,
+    patience=25,
+    epochs=1000,
+    validation_split=0.3
+)
+save_model(model)

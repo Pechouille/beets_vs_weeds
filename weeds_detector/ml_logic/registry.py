@@ -7,16 +7,16 @@ from colorama import Fore, Style
 import glob
 
 
-def save_model(model: keras.Model = None) -> None:
+def save_model(model: keras.Model, model_type: str) -> None:
     """
-    Persist trained model locally on the hard drive at f"{LOCAL_REGISTRY_PATH}/models/{timestamp}.h5"
-    - if MODEL_TARGET='gcs', also persist it in your bucket on GCS at "models/{timestamp}.h5" --> unit 02 only
+    Persist trained model locally on the hard drive at f"{LOCAL_REGISTRY_PATH}/models/{model_type}_{timestamp}.h5"
+    - if MODEL_TARGET='gcs', also persist it in your bucket on GCS at "models/{model_type}_{timestamp}.h5" --> unit 02 only
     """
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save model locally
-    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{timestamp}.h5")
+    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.h5")
     model.save(model_path)
 
     print("✅ Model saved locally")
@@ -34,15 +34,12 @@ def save_model(model: keras.Model = None) -> None:
         return None
 
 
-def load_model():
-
+def load_model(model_type: str):
         if MODEL_TARGET == "local":
-
             print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
-
             # Get the latest model version name by the timestamp on disk
             local_model_directory = os.path.join(LOCAL_REGISTRY_PATH, "models")
-            local_model_paths = glob.glob(f"{local_model_directory}/*")
+            local_model_paths = glob.glob(f"{local_model_directory}/{model_type}_*")
 
             if not local_model_paths:
                 return None
@@ -58,12 +55,9 @@ def load_model():
             return latest_model
 
         elif MODEL_TARGET == "gcs":
-
             print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
-
             client = storage.Client()
             blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
-
             try:
                 latest_blob = max(blobs, key=lambda x: x.updated)
                 latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
