@@ -17,4 +17,4 @@ model, history = train_model(model,
         validation_data=None,
         validation_split=0.3)
 
-save_model(model)
+save_model(model, 'cnn_classif')
