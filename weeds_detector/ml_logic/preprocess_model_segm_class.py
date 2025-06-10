@@ -4,7 +4,7 @@ import os
 import shutil
 import requests
 from io import BytesIO
-from torchvision import transforms
+from tensorflow.keras.utils import img_to_array
 from PIL import Image
 from weeds_detector.params import *
 from google.cloud import storage
@@ -66,7 +66,7 @@ def copy_file(file_name, origin_dir, output_dir):
         source_bucket = storage_client.bucket(BUCKET_NAME)
         source_blob = source_bucket.blob(os.path.join(origin_dir, file_name))
         destination_blob_name = os.path.join(output_dir, file_name)
-        blob_copy = source_bucket.copy_blob(
+        source_bucket.copy_blob(
                 source_blob, source_bucket, destination_blob_name
         )
         print("✅ Images copied in the ouput_dir")
@@ -103,7 +103,7 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     print("3 - DATA LOADED")
     print("---------------------------")
     list_of_tensors = []
-    transform = transforms.Compose([transforms.PILToTensor()])
+    filenames_ordered = []
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
     count = 0
@@ -114,34 +114,27 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
         print(f"Start Preprocess : {file_name}")
         print("---------------------------")
         if file_name in img_needed:
-            if not folder_exist:
+            print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
+            source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
+            image_path = source_blob.public_url
+            response = requests.get(image_path)
+            if response.status_code == 200:
+                print(f"Response code : {response.status_code}")
+                new_image = Image.open(BytesIO(response.content)).convert("RGB")
+            else:
+                print(f"Response code | {response.status_code} : Image not found transform image")
                 new_image = transform_image(file_name, file_path, output_dir)
-            elif folder_exist:
-                print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
-                source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
-                image_path = source_blob.public_url
-                response = requests.get(image_path)
-                if response.status_code == 200:
-                    print(f"Response code : {response.status_code}")
-                    new_image = Image.open(BytesIO(response.content)).convert("RGB")
-                else:
-                    print(f"Response code | {response.status_code} : Image not found transform image")
-                    new_image = transform_image(file_name, file_path, output_dir)
-            transf = transform(new_image)
-            tensor = transf.permute(1, 2, 0)
-            list_of_tensors.append(tensor)
+            image = img_to_array(new_image)
+            image = image / 255.0
+            list_of_tensors.append(image)
+            filenames_ordered.append(file_name)
             count +=1
         print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
         print("---------------------------")
-    print("START Transform tensor to numpy")
-    X_prepro = np.array([tensor.numpy() for tensor in list_of_tensors])
-    print("Finish Transform tensor to numpy")
-    print("START divide by 255")
-    X_prepro = X_prepro / 255
-    print("Finished divide by 255")
-    return X_prepro
+    X_prepro = np.stack(list_of_tensors, axis=0)
+    return X_prepro, filenames_ordered
 
-def preprocess_y(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
+def preprocess_y(filenames_ordered, number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
 
     splited_data = get_json_content(data_split_filename)
 
@@ -161,35 +154,42 @@ def preprocess_y(number_of_bbox, image_characteristics_filename = "image_charact
         lst.append(dict['category_id'])
         if dict['image_id'] not in file_filtered_df['id']:
             dictio[dict['image_id']].append(lst)
+
     resized = int(RESIZED)
     for key, value in dictio.items():
         for bb in value:
-            bb[0][0] = (bb[0][0] /1920) * resized
-            bb[0][2] = (bb[0][2] /1920) * resized
-            bb[0][1] = (bb[0][1] /1080) * resized
-            bb[0][3] = (bb[0][3] /1080) * resized
+            bb[0][0] = (bb[0][0] / 1920) * resized
+            bb[0][2] = (bb[0][2] / 1920) * resized
+            bb[0][1] = (bb[0][1] / 1080) * resized
+            bb[0][3] = (bb[0][3] / 1080) * resized
 
     for key, value in dictio.items():
-        if len(value) < 10:
-            while len(value) < 10:
-                value.append([[0,0,0,0],0])
+        if len(value) < number_of_bbox:
+            while len(value) < number_of_bbox:
+                value.append([[0, 0, 0, 0], 0])
 
-    y_bbox = np.zeros((2554, 10, 4))
+    number_of_images = len(filenames_ordered)
+    y_bbox = np.zeros((number_of_images, number_of_bbox, 4))
+    y_class = np.zeros((number_of_images, number_of_bbox, 1))
 
-    dataframe = pd.DataFrame(dictio)
+    filename_to_id = {img["file_name"]: img["id"] for img in splited_data["images"]}
 
-    for column in range(2554):
-            for i in range(10):
-                bbox, class_id = dataframe.iloc[i, column]
-                y_bbox[column, i] = bbox
+    for idx, fname in enumerate(filenames_ordered):
+        image_id = filename_to_id[fname]
+        for i in range(number_of_bbox):
+            bbox, class_id = dictio[image_id][i]
+            y_bbox[idx, i] = bbox
+            y_class[idx, i] = class_id
 
-    y_bbox = y_bbox/128
+    y_bbox = y_bbox / resized
 
-    y_class = np.zeros((2554, 10, 1))
+    #Creation of the mask
+    mask = np.zeros((number_of_images, number_of_bbox, 1), dtype=np.float32)
+    for idx, fname in enumerate(filenames_ordered):
+        image_id = filename_to_id[fname]
+        for i in range(number_of_bbox):
+            bbox, class_id = dictio[image_id][i]
+            if bbox != [0, 0, 0, 0] or class_id != 0:
+                mask[idx, i] = 1.0
 
-    for column in range(2554):
-            for i in range(10):
-                bbox, class_id = dataframe.iloc[i, column]
-                y_class[column, i] = class_id
-
-    return y_bbox, y_class
+    return y_bbox, y_class, mask
