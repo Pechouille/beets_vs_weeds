@@ -53,6 +53,8 @@ def preprocess_features():
 
     return X_prepro, y
 
+
+# API FUNCTION (need to be changed)
 def preprocess_single_image(img: Image.Image) -> np.ndarray:
     transform = transforms.PILToTensor()
 

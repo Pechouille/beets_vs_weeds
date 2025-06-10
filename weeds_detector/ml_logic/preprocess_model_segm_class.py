@@ -4,7 +4,7 @@ import os
 import shutil
 import requests
 from io import BytesIO
-from tensorflow.keras.utils import img_to_array
+from tensorflow.keras.utils import img_to_array, save_img
 from PIL import Image
 from weeds_detector.params import *
 from google.cloud import storage
@@ -82,16 +82,13 @@ def transform_image(file_name, file_path, output_dir):
     return new_image
 
 def preprocess_images(number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
-    """
-    input folder being the folder where all images are located
-    output folder is the empty folder that will contain only the images we need to preprocess
-    prepro folder is the empty folder that will contain the images preprocessed
-    """
+
     print("1 - START PREPROCESS IMAGE")
     print("---------------------------")
 
-    print("2 - START LOAD DATA")
+    print("2 - START ESTABLSIHING EXCLUDED IMAGES")
     print("---------------------------")
+
     splited_data = get_json_content(data_split_filename)
 
     file_filtered_df = df_img_selected_by_max_bbox_nbr(number_of_bbox, image_characteristics_filename)
@@ -100,38 +97,53 @@ def preprocess_images(number_of_bbox, image_characteristics_filename = "image_ch
     annotated_ids = annotated_img_ids(splited_data)
 
     img_needed = img_needed_filenames(splited_data, excluded_filename, annotated_ids)
-    print("3 - DATA LOADED")
+
+    print("3 - EXCLUDED IMAGES ESTABLISHED")
     print("---------------------------")
+
     list_of_tensors = []
     filenames_ordered = []
+
     print("4 - START PREPROCESS EACH IMAGES")
     print("---------------------------")
+
     count = 0
     output_dir, folder_exist = create_folder(f'images_preprocessed/full_images_resized/{RESIZED}x{RESIZED}')
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME)
     for file_path, file_name in get_all_files_path_and_name_in_directory("all", extensions = [".png"]):
+
         print(f"Start Preprocess : {file_name}")
         print("---------------------------")
+
         if file_name in img_needed:
+
             print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
             source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
             image_path = source_blob.public_url
             response = requests.get(image_path)
+
             if response.status_code == 200:
                 print(f"Response code : {response.status_code}")
                 new_image = Image.open(BytesIO(response.content)).convert("RGB")
             else:
                 print(f"Response code | {response.status_code} : Image not found transform image")
                 new_image = transform_image(file_name, file_path, output_dir)
+
             image = img_to_array(new_image)
             image = image / 255.0
             list_of_tensors.append(image)
             filenames_ordered.append(file_name)
             count +=1
+
         print(f"{count} / {len(img_needed)} Image Preprocessed : {file_name}")
         print("---------------------------")
+
     X_prepro = np.stack(list_of_tensors, axis=0)
+
+
+    print("5 - PREPROCESS OF EACH IMAGE DONE")
+
     return X_prepro, filenames_ordered
 
 def preprocess_y(filenames_ordered, number_of_bbox, image_characteristics_filename = "image_characteristics.csv", data_split_filename = "json_train_set.json"):
