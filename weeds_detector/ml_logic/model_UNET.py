@@ -158,7 +158,7 @@ def initialize_model() -> Model:
     s4, p4 = encoder_block(resized * 2, inputs=p3)
 
     # Setting up the baseline
-    baseline = baseline_layer(1024, p4)
+    baseline = baseline_layer(resized*4, p4)
 
     # Defining the entire decoder
     d1 = decoder_block(resized * 2, s4, baseline)
