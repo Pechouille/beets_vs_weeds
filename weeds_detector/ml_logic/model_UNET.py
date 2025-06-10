@@ -92,6 +92,36 @@ def compile_model(model):
 
     return model
 
+
+def process_path(image_path, mask_path):
+    '''This methode is only used in load_dataset and shall not be used anywhere else
+    it automaically normalize the input image before inserting them in the dataset'''
+    # Chargement du fichier image
+    image = tf.io.read_file(image_path)
+    image = tf.image.decode_png(image, channels=3)  # couleur
+    image = tf.image.resize(image, [256, 256])
+    image = tf.cast(image, tf.float32) / 255.0  # normalisation [0, 1]
+
+    # Chargement du masque
+    mask = tf.io.read_file(mask_path)
+    mask = tf.image.decode_png(mask, channels=1)  # niveau de gris (binaire ou multiclasses)
+    mask = tf.image.resize(mask, [256, 256], method='nearest')  # nearest pour préserver les classes
+    mask = tf.cast(mask, tf.uint8)  # typiquement les masques sont des entiers (classe 0, 1, 2…)
+
+    return image, mask
+
+def build_dataset(image_dir, mask_dir, batch_size=16):
+    '''Build dataset which are consumed but the train process'''
+    image_paths = sorted([os.path.join(image_dir, fname) for fname in os.listdir(image_dir)])
+    mask_paths = sorted([os.path.join(mask_dir, fname) for fname in os.listdir(mask_dir)])
+
+    dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
+    dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.shuffle(buffer_size=100)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    return dataset
+
 def train_model(model,
         dataset,
         batch_size=32,
