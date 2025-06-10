@@ -3,11 +3,16 @@ from weeds_detector.ml_logic.training_model_segm_class import *
 from weeds_detector.ml_logic.registry import *
 
 
-X_prepro, filenames_ordered = preprocess_images(2)
-y_bbox, y_class, mask = preprocess_y(filenames_ordered, 2)
+X_prepro, filenames_ordered = preprocess_images(5)
+y_bbox, y_class, mask = preprocess_y(filenames_ordered, 5)
+print('Preprocessed of X and y done')
 
-model = initialize_model(max_boxes=2, num_classes=1)
+model = initialize_model(max_boxes=5, num_classes=1)
+print('Model initialized')
+
 model = compile_model(model)
+print('Model compiled')
+
 
 model, history = train_model(
     model,
