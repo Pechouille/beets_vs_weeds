@@ -44,41 +44,28 @@ jobs:
 
       - name: Create or update instance
         run: |
-          if ! gcloud compute instances describe ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ vars.COMPUTE_ENGINE_ZONE }} > /dev/null 2>&1; then
-            echo "🚀 Creating new instance: ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }}"
-            gcloud compute instances create-with-container ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} \
-              --zone=${{ vars.COMPUTE_ENGINE_ZONE }} \
-              --machine-type=${{ vars.COMPUTE_ENGINE_MACHINE_TYPE }} \
-              --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-              --container-restart-policy=always \
-              --set-env-vars=PORT=8080 \
-              --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
-              --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
-              --set-env-vars=FILE_ORIGIN=gcp \
-              --set-env-vars=MODEL_TARGET=gcs \
-              --set-env-vars=GCP_PROJECT=${{ vars.PROJECT_ID }} \
-              --set-env-vars=GCP_REGION=${{ vars.GCP_REGION }} \
-              --set-env-vars=BUCKET_NAME=beets_vs_weeds \
-              --tags=http-server \
-              --scopes=https://www.googleapis.com/auth/cloud-platform \
-              --boot-disk-size=100GB \
-              --boot-disk-type=pd-standard \
-              --image-family=cos-stable \
-              --image-project=cos-cloud
+          if ! gcloud compute instances describe prod-instance --zone=europe-west9-a > /dev/null 2>&1; then
+              echo "🚀 Creating new instance: prod-instance"
+              gcloud compute instances create-with-container prod-instance \
+                --zone=europe-west9-a \
+                --machine-type=e2-standard-4 \
+                --container-image=europe-west9-docker.pkg.dev/la-wagon-bootcamp-datascience/weedsdetector/weeds_detector:latest \
+                --container-restart-policy=always \
+                --set-env-vars="^:^PORT=8080:DATA_SIZE=:CHUNK_SIZE=:FILE_ORIGIN=gcp:MODEL_TARGET=gcs:GCP_PROJECT=la-wagon-bootcamp-datascience:GCP_REGION=:BUCKET_NAME=beets_vs_weeds" \
+                --tags=http-server \
+                --scopes=https://www.googleapis.com/auth/cloud-platform \
+                --boot-disk-size=100GB \
+                --boot-disk-type=pd-standard \
+                --image-family=cos-stable \
+                --image-project=cos-cloud
           else
-            echo "🔄 Instance exists, updating container..."
-            gcloud compute instances update-container ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} \
-              --zone=${{ vars.COMPUTE_ENGINE_ZONE }} \
-              --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-              --set-env-vars=PORT=8080 \
-              --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
-              --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
-              --set-env-vars=FILE_ORIGIN=gcp \
-              --set-env-vars=MODEL_TARGET=gcs \
-              --set-env-vars=GCP_PROJECT=${{ vars.PROJECT_ID }} \
-              --set-env-vars=GCP_REGION=${{ vars.GCP_REGION }} \
-              --set-env-vars=BUCKET_NAME=beets_vs_weeds \
+              echo "🔄 Instance exists, updating container..."
+              gcloud compute instances update-container prod-instance \
+                --zone=europe-west9-a \
+                --container-image=europe-west9-docker.pkg.dev/la-wagon-bootcamp-datascience/weedsdetector/weeds_detector:latest \
+                --set-env-vars="^:^PORT=8080:DATA_SIZE=:CHUNK_SIZE=:FILE_ORIGIN=gcp:MODEL_TARGET=gcs:GCP_PROJECT=la-wagon-bootcamp-datascience:GCP_REGION=:BUCKET_NAME=beets_vs_weeds"
           fi
+
 
       - name: Wait for instance to be ready
         run: |
