@@ -66,13 +66,13 @@ jobs:
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
               --container-restart-policy=always \
               --container-env=PORT=8080 \
-              --container-env=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
+              --container-env=GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.SERVICE_ACCOUNT_KEY }}" \
               --container-env=DATA_SIZE=${{ env.DATA_SIZE }} \
               --container-env=CHUNK_SIZE=${{ env.CHUNK_SIZE }} \
               --container-env=FILE_ORIGIN=gcp \
               --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
               --container-env=GCP_REGION=${{ env.GCP_REGION }} \
-              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }}
+              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }} \
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
               --boot-disk-size=100GB \
@@ -91,7 +91,7 @@ jobs:
               --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
               --container-env=GCP_REGION=${{ env.GCP_REGION }} \
               --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }} \
-              --container-env=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }}
+              --container-env=GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.SERVICE_ACCOUNT_KEY }}"
           fi
 
       - name: Wait for instance to be ready
