@@ -51,7 +51,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --port 8080 \
-            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE || 200 }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }}" \
+            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},CHUNK_SIZE=${{ vars.CHUNK_SIZE || 200 }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.ARTIFACT_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME || 'beets_vs_weeds' }}" \
             --memory=12Gi \
             --cpu=4 \
             --max-instances=10 \
