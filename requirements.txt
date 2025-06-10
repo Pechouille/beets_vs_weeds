@@ -10,3 +10,5 @@ colorama
 fastapi
 uvicorn
 matplotlib
+logger
+python-multipart
