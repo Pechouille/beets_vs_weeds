@@ -73,7 +73,7 @@ def copy_file(file_name, origin_dir, output_dir):
         return None
 
 def transform_image(file_name, file_path, output_dir):
-    print(f"Create image : preprocessed_{file_name} save in bucket {output_dir}")
+    print(f"Create im age : preprocessed_{file_name} save in bucket {output_dir}")
     response = requests.get(file_path)
     img = Image.open(BytesIO(response.content)).convert("RGB")
     resized_value = int(RESIZED)
