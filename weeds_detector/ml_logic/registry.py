@@ -5,7 +5,7 @@ from tensorflow import keras
 from google.cloud import storage
 from colorama import Fore, Style
 from glob import glob
-
+import requests
 
 def save_model(model: keras.Model, model_type: str) -> None:
     """
@@ -61,7 +61,10 @@ def load_model(model_type: str):
             try:
                 latest_blob = max(blobs, key=lambda x: x.updated)
                 latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
-                latest_blob.download_to_filename(latest_model_path_to_save)
+
+                response = requests.get(latest_blob.public_url)
+                with open(latest_model_path_to_save, 'wb') as f:
+                    f.write(response.content)
 
                 latest_model = keras.models.load_model(latest_model_path_to_save)
 
