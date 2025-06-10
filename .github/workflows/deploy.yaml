@@ -52,7 +52,6 @@ jobs:
               --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
               --container-restart-policy=always \
               --set-env-vars=PORT=8080 \
-              --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
               --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
               --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
               --set-env-vars=FILE_ORIGIN=gcp \
@@ -72,7 +71,6 @@ jobs:
               --zone=${{ vars.COMPUTE_ENGINE_ZONE }} \
               --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
               --set-env-vars=PORT=8080 \
-              --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
               --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
               --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
               --set-env-vars=FILE_ORIGIN=gcp \
