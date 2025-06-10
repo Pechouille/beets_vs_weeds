@@ -14,3 +14,4 @@ streamlit
 requests
 matplotlib
 logger
+scikit_image
