@@ -45,14 +45,14 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           echo "🚀 Deploying to Cloud Run..."
-          gcloud run deploy ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }} \
+          gcloud run deploy ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }} \
             --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
             --region ${{ vars.ARTIFACT_REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --port 8080 \
             --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }}" \
-            --memory=2Gi \
+            --memory=20Gi \
             --cpu=1 \
             --max-instances=10 \
             --timeout=3600 \
@@ -60,11 +60,11 @@ jobs:
 
       - name: Get deployment details
         run: |
-          SERVICE_URL=$(gcloud run services describe ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }} \
+          SERVICE_URL=$(gcloud run services describe ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }} \
             --region=${{ vars.ARTIFACT_REGION }} \
             --format='value(status.url)')
 
           echo "🎉 Application deployed successfully to Cloud Run!"
-          echo "📍 Service: ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }}"
+          echo "📍 Service: ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }}"
           echo "🌍 Region: ${{ vars.ARTIFACT_REGION }}"
           echo "🌐 Service URL: $SERVICE_URL"
