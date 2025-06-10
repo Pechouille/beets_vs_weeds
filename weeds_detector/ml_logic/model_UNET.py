@@ -3,7 +3,7 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, conca
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
 import random
 from tensorflow.keras.losses import BinaryCrossentropy
 
@@ -52,6 +52,7 @@ def decoder_block(filters, connections, inputs):
   x = Conv2D(filters, kernel_size = (2,2), padding = 'same', activation = 'relu')(skip_connections)
   x = Conv2D(filters, kernel_size = (2,2), padding = 'same', activation = 'relu')(x)
   return x
+
 
 def initialize_model():
 
@@ -103,7 +104,7 @@ def train_model(model,
 
     history = model.fit(dataset,
                         validation_data=validation_data,
-                        epochs=50,
+                        epochs=5,
                         callbacks=[early_stopping])
     return model, history
 
