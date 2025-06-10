@@ -19,22 +19,11 @@ model, history = train_model(
     X_prepro,
     y_class,
     y_bbox,
-    batch_size=7,
+    batch_size=32,
     patience=2,
     epochs=10,
     validation_split=0.3
 )
+print('Model trained')
 
-save_model(model)
-
-model, history = train_model(
-    model,
-    X_prepro,
-    y_class,
-    y_bbox,
-    batch_size=32,
-    patience=25,
-    epochs=1000,
-    validation_split=0.3
-)
-save_model(model)
+save_model(model, 'cnn_segm_classif')
