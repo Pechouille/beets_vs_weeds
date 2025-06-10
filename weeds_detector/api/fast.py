@@ -59,20 +59,20 @@ async def create_upload_file(file: UploadFile = File(...)):
 
 
 
-@app.get("/predict/")
-async def predict(file: UploadFile = File(...)):
-    # Lire l'image uploadée
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents)).convert("RGB")
+# @app.get("/predict/")
+# async def predict(file: UploadFile = File(...)):
+#     # Lire l'image uploadée
+#     contents = await file.read()
+#     image = Image.open(io.BytesIO(contents)).convert("RGB")
 
-    # Prétraitement
-    X = preprocess_single_image(image)
+#     # Prétraitement
+#     X = preprocess_single_image(image)
 
-    # Prédiction
-    app.state.model = load_model()
-    pred = app.state.model.predict(X)[0][0]  # sortie sigmoide entre 0 et 1
+#     # Prédiction
+#     app.state.model = load_model()
+#     pred = app.state.model.predict(X)[0][0]  # sortie sigmoide entre 0 et 1
 
-    # Seuil à 0.5 par défaut pour classer
-    classe = int(pred > 0.5)
+#     # Seuil à 0.5 par défaut pour classer
+#     classe = int(pred > 0.5)
 
-    return {"prediction": classe, "confidence": float(pred)}
+#     return {"prediction": classe, "confidence": float(pred)}
