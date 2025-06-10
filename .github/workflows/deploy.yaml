@@ -47,7 +47,7 @@ jobs:
           echo "🚀 Deploying to Cloud Run..."
           gcloud run deploy ${{ vars.SERVICE_NAME }} \
             --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-            --region ${{ vars.GCP_REGION }} \
+            --region ${{ vars.ARTIFACT_REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --port 8080 \
