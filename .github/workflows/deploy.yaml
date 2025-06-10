@@ -17,20 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create env_vars.yaml
-        run: |
-          cat <<EOF > env_vars.yaml
-          PORT=8080
-          GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }}
-          DATA_SIZE=${{ vars.DATA_SIZE }}
-          CHUNK_SIZE=${{ vars.CHUNK_SIZE }}
-          FILE_ORIGIN=gcp
-          MODEL_TARGET=gcs
-          GCP_PROJECT=${{ vars.PROJECT_ID }}
-          GCP_REGION=${{ vars.GCP_REGION }}
-          BUCKET_NAME=beets_vs_weeds
-          EOF
-
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -65,7 +51,15 @@ jobs:
               --machine-type=${{ vars.COMPUTE_ENGINE_MACHINE_TYPE }} \
               --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
               --container-restart-policy=always \
-              --container-env-file=env_vars.yaml \
+              --set-env-vars=PORT=8080 \
+              --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
+              --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
+              --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
+              --set-env-vars=FILE_ORIGIN=gcp \
+              --set-env-vars=MODEL_TARGET=gcs \
+              --set-env-vars=GCP_PROJECT=${{ vars.PROJECT_ID }} \
+              --set-env-vars=GCP_REGION=${{ vars.GCP_REGION }} \
+              --set-env-vars=BUCKET_NAME=beets_vs_weeds \
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
               --boot-disk-size=100GB \
@@ -77,7 +71,15 @@ jobs:
             gcloud compute instances update-container ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ vars.COMPUTE_ENGINE_ZONE }} \
               --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-              --container-env-file=env_vars.yaml
+              --set-env-vars=PORT=8080 \
+              --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.SERVICE_ACCOUNT_KEY }} \
+              --set-env-vars=DATA_SIZE=${{ vars.DATA_SIZE }} \
+              --set-env-vars=CHUNK_SIZE=${{ vars.CHUNK_SIZE }} \
+              --set-env-vars=FILE_ORIGIN=gcp \
+              --set-env-vars=MODEL_TARGET=gcs \
+              --set-env-vars=GCP_PROJECT=${{ vars.PROJECT_ID }} \
+              --set-env-vars=GCP_REGION=${{ vars.GCP_REGION }} \
+              --set-env-vars=BUCKET_NAME=beets_vs_weeds \
           fi
 
       - name: Wait for instance to be ready
