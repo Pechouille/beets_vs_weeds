@@ -7,20 +7,6 @@ on:
     types:
       - completed
 
-env:
-  PROJECT_ID: ${{ vars.PROJECT_ID }}
-  ARTIFACT_REGION: ${{ vars.ARTIFACT_REGION }}
-  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
-  ARTIFACT_IMAGE_NAME: ${{ vars.IMAGE_NAME }}
-  COMPUTE_ENGINE_INSTANCE_NAME: ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }}
-  COMPUTE_ENGINE_MACHINE_TYPE: ${{ vars.COMPUTE_ENGINE_MACHINE_TYPE }}
-  COMPUTE_ENGINE_ZONE: ${{ vars.COMPUTE_ENGINE_ZONE }}
-  DATA_SIZE: ${{ vars.DATA_SIZE }}
-  CHUNK_SIZE: ${{ vars.CHUNK_SIZE }}
-  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
-  GCP_REGION: ${{ vars.GCP_REGION }}
-  BUCKET_NAME: ${{ vars.BUCKET_NAME }}
-
 jobs:
   deploy_docker:
     runs-on: ubuntu-latest
@@ -30,6 +16,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Create env_vars.yaml
+        run: |
+          cat <<EOF > env_vars.yaml
+          env:
+          - name: PORT
+            value: "8080"
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
+          - name: DATA_SIZE
+            value: "${{ env.DATA_SIZE }}"
+          - name: CHUNK_SIZE
+            value: "${{ env.CHUNK_SIZE }}"
+          - name: FILE_ORIGIN
+            value: "gcp"
+          - name: GCP_PROJECT
+            value: "${{ env.GCP_PROJECT }}"
+          - name: GCP_REGION
+            value: "${{ env.GCP_REGION }}"
+          - name: BUCKET_NAME
+            value: "${{ env.BUCKET_NAME }}"
+          EOF
 
       - id: auth
         uses: google-github-actions/auth@v2
@@ -65,14 +73,7 @@ jobs:
               --machine-type=${{ env.COMPUTE_ENGINE_MACHINE_TYPE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
               --container-restart-policy=always \
-              --container-env=PORT=8080 \
-              --container-env=GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.SERVICE_ACCOUNT_KEY }}" \
-              --container-env=DATA_SIZE=${{ env.DATA_SIZE }} \
-              --container-env=CHUNK_SIZE=${{ env.CHUNK_SIZE }} \
-              --container-env=FILE_ORIGIN=gcp \
-              --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
-              --container-env=GCP_REGION=${{ env.GCP_REGION }} \
-              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }} \
+              --container-env-file=env_vars.yaml \
               --tags=http-server \
               --scopes=https://www.googleapis.com/auth/cloud-platform \
               --boot-disk-size=100GB \
@@ -84,14 +85,7 @@ jobs:
             gcloud compute instances update-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
               --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
               --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
-              --container-env=PORT=8080 \
-              --container-env=DATA_SIZE=${{ env.DATA_SIZE }} \
-              --container-env=CHUNK_SIZE=${{ env.CHUNK_SIZE }} \
-              --container-env=FILE_ORIGIN=gcp \
-              --container-env=GCP_PROJECT=${{ env.GCP_PROJECT }} \
-              --container-env=GCP_REGION=${{ env.GCP_REGION }} \
-              --container-env=BUCKET_NAME=${{ env.BUCKET_NAME }} \
-              --container-env=GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.SERVICE_ACCOUNT_KEY }}"
+              --container-env-file=env_vars.yaml
           fi
 
       - name: Wait for instance to be ready
