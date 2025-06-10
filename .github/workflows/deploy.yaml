@@ -1,4 +1,4 @@
-name: Deploy Docker Image from Artifact Registry to Compute Engine
+name: Deploy Docker Image from Artifact Registry to Cloud Run
 
 on:
   workflow_dispatch:
@@ -36,51 +36,35 @@ jobs:
       - name: Verify image exists
         run: |
           if ! gcloud artifacts docker images describe \
-            ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest; then
+            ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:0.1; then
             echo "❌ Docker image not found in Artifact Registry"
             exit 1
           fi
           echo "✅ Docker image verified in Artifact Registry"
 
-      - name: Create or update instance
+      - name: Deploy to Cloud Run
         run: |
-          if ! gcloud compute instances describe prod-instance --zone=europe-west9-a > /dev/null 2>&1; then
-              echo "🚀 Creating new instance: prod-instance"
-              gcloud compute instances create-with-container prod-instance \
-                --zone=europe-west9-a \
-                --machine-type=e2-standard-4 \
-                --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-                --container-restart-policy=always \
-                --container-env=PORT=8080,DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }} \
-                --tags=http-server \
-                --scopes=https://www.googleapis.com/auth/cloud-platform \
-                --boot-disk-size=100GB \
-                --boot-disk-type=pd-standard \
-                --image-family=cos-stable \
-                --image-project=cos-cloud
-          else
-              echo "🔄 Instance exists, updating container..."
-              gcloud compute instances update-container prod-instance \
-                --zone=europe-west9-a \
-                --container-image=${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
-                --container-env=PORT=8080,DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }}
-          fi
-
-
-
-      - name: Wait for instance to be ready
-        run: |
-          echo "⏳ Waiting for instance to be ready..."
-          timeout 300 bash -c 'until gcloud compute instances describe ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ vars.COMPUTE_ENGINE_ZONE }} --format="get(status)" | grep -q "RUNNING"; do sleep 10; done'
+          echo "🚀 Deploying to Cloud Run..."
+          gcloud run deploy ${{ vars.SERVICE_NAME }} \
+            --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:0.1 \
+            --region ${{ vars.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE }},CHUNK_SIZE=${{ vars.CHUNK_SIZE }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.GCP_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME }}" \
+            --memory=20Gi \
+            --cpu=1 \
+            --max-instances=10 \
+            --timeout=3600 \
+            --concurrency=80
 
       - name: Get deployment details
         run: |
-          EXTERNAL_IP=$(gcloud compute instances describe ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }} \
-            --zone=${{ vars.COMPUTE_ENGINE_ZONE }} \
-            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          SERVICE_URL=$(gcloud run services describe ${{ vars.SERVICE_NAME }} \
+            --region=${{ vars.GCP_REGION }} \
+            --format='value(status.url)')
 
-          echo "🎉 Application deployed successfully!"
-          echo "📍 Instance: ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }}"
-          echo "🌍 Zone: ${{ vars.COMPUTE_ENGINE_ZONE }}"
-          echo "🔗 External IP: $EXTERNAL_IP"
-          echo "🌐 Access URL: http://$EXTERNAL_IP:8080"
+          echo "🎉 Application deployed successfully to Cloud Run!"
+          echo "📍 Service: ${{ vars.SERVICE_NAME || 'my-service' }}"
+          echo "🌍 Region: ${{ vars.GCP_REGION }}"
+          echo "🌐 Service URL: $SERVICE_URL"
