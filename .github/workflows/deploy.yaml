@@ -56,12 +56,12 @@ jobs:
       - name: Example Step
         run: |
           echo "Project ID: $PROJECT_ID"
-          echo "Artifact Region: ${{ env.ARTIFACT_REGION }}"
-          echo "Artifact Registry: ${{ env.ARTIFACT_REGISTRY }}"
-          echo "Artifact Image Name: ${{ env.ARTIFACT_IMAGE_NAME }}"
-          echo "Compute Engine Instance Name: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
-          echo "Compute Engine Zone: ${{ env.COMPUTE_ENGINE_ZONE }}"
-          echo "Compute Engine Machine Type: ${{ env.COMPUTE_ENGINE_MACHINE_TYPE }}"
+          echo "Artifact Region: ${{ vars.ARTIFACT_REGION }}"
+          echo "Artifact Registry: ${{ vars.ARTIFACT_REGISTRY }}"
+          echo "Artifact Image Name: ${{ vars.IMAGE_NAME }}"
+          echo "Compute Engine Instance Name: ${{ vars.COMPUTE_ENGINE_INSTANCE_NAME }}"
+          echo "Compute Engine Zone: ${{ vars.COMPUTE_ENGINE_ZONE }}"
+          echo "Compute Engine Machine Type: ${{ vars.COMPUTE_ENGINE_MACHINE_TYPE }}"
 
       - id: auth
         uses: google-github-actions/auth@v2
