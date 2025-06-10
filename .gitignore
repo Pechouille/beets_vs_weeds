@@ -195,7 +195,3 @@ cython_debug/
 data/
 .DS_Store
 *.h5
-
-# Images
-*.png
-*.jpg
