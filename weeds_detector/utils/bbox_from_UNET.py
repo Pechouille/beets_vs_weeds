@@ -1,8 +1,10 @@
-import tensorflow as tf
+from tensorflow import io
+from tensorflow import image
+from tensorflow import cast
+from tensorflow import expand_dims
+from tensorflow import float32
 import numpy as np
 from skimage.measure import label, regionprops, find_contours
-from weeds_detector.ml_logic.model_UNET import initialize_model, compile_model
-from glob import glob
 import os
 from PIL import Image
 from weeds_detector.data import get_all_files_path_and_name_in_directory, get_filepath
@@ -11,12 +13,12 @@ from io import BytesIO
 
 
 def process_test_image(image_path):
-    image = tf.io.read_file(image_path)
-    image = tf.image.decode_png(image, channels=3)
-    image = tf.image.resize(image, [256, 256])
-    image = tf.cast(image, tf.float32) / 255.0
-    image = tf.expand_dims(image, axis=0)  # batch size de 1
-    return image
+    png = io.read_file(image_path)
+    png = image.decode_image(png, channels=3)
+    png = image.resize(png, [256, 256])
+    png = cast(png, float32) / 255.0
+    png = expand_dims(png, axis=0)  # batch size de 1
+    return png
 
 def prediction_mask_image(model, image):
     y_pred = model.predict(image, verbose=0)
