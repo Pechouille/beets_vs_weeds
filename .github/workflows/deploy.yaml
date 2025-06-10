@@ -47,7 +47,7 @@ jobs:
           echo "🚀 Deploying to Cloud Run..."
           gcloud run deploy ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }} \
             --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:0.1 \
-            --region ${{ vars.GCP_REGION }} \
+            --region ${{ vars.ARTIFACT_REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --port 8080 \
@@ -61,10 +61,10 @@ jobs:
       - name: Get deployment details
         run: |
           SERVICE_URL=$(gcloud run services describe ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }} \
-            --region=${{ vars.GCP_REGION }} \
+            --region=${{ vars.ARTIFACT_REGION }} \
             --format='value(status.url)')
 
           echo "🎉 Application deployed successfully to Cloud Run!"
           echo "📍 Service: ${{ vars.SERVICE_NAME || 'beets_vs_weeds_api_prod' }}"
-          echo "🌍 Region: ${{ vars.GCP_REGION }}"
+          echo "🌍 Region: ${{ vars.ARTIFACT_REGION }}"
           echo "🌐 Service URL: $SERVICE_URL"
