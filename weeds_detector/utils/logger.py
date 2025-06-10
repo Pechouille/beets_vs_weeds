@@ -3,7 +3,6 @@ import socket
 import time
 from pathlib import Path
 
-
 # Configure logging
 def setup_logging():
     """Setup logging configuration with both file and console handlers"""
@@ -39,3 +38,4 @@ def setup_logging():
 # import the logger using
 # from .logger import logger
 logger = setup_logging()
+

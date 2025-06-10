@@ -18,13 +18,9 @@ from weeds_detector.utils.images import save_image
 
 
 def preprocess_features():
-
     list_of_tensors = []
-
     files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
-
     output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized_{CROPED_SIZE}/{RESIZED}x{RESIZED}')
-
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME)
 
@@ -32,7 +28,6 @@ def preprocess_features():
         print(f"Get image : preprocessed_{file_name} in bucket {output_dir}")
         source_blob = source_bucket.blob(os.path.join(output_dir, f"preprocessed_{file_name}"))
         image_path = source_blob.public_url
-
         response = requests.get(image_path)
 
         if response.status_code == 200:
