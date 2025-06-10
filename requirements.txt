@@ -12,3 +12,5 @@ uvicorn
 python-multipart
 streamlit
 requests
+matplotlib
+logger
