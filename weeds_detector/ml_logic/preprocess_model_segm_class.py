@@ -195,13 +195,4 @@ def preprocess_y(filenames_ordered, number_of_bbox, image_characteristics_filena
 
     y_bbox = y_bbox / resized
 
-    #Creation of the mask
-    mask = np.zeros((number_of_images, number_of_bbox, 1), dtype=np.float32)
-    for idx, fname in enumerate(filenames_ordered):
-        image_id = filename_to_id[fname]
-        for i in range(number_of_bbox):
-            bbox, class_id = dictio[image_id][i]
-            if bbox != [0, 0, 0, 0] or class_id != 0:
-                mask[idx, i] = 1.0
-
-    return y_bbox, y_class, mask
+    return y_bbox, y_class
