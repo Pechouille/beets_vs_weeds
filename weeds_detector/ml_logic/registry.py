@@ -57,12 +57,13 @@ def load_model(model_type: str):
         elif MODEL_TARGET == "gcs":
 
             print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
-            
+
             client = storage.Client()
             blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
 
             latest_blob = max(blobs, key=lambda x: x.updated)
             latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
+            os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
             latest_blob.download_to_filename(latest_model_path_to_save)
             latest_model = keras.models.load_model(latest_model_path_to_save)
 
