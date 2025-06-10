@@ -1,6 +1,6 @@
 from weeds_detector.ml_logic.preprocess_model_class import preprocess_features
-from weeds_detector.ml_logic.training_model_class import *
-from weeds_detector.ml_logic.registry import *
+from weeds_detector.ml_logic.training_model_class import train_model, initialize_model, compile_model
+from weeds_detector.ml_logic.registry import save_model
 
 
 X_prepro, y = preprocess_features()

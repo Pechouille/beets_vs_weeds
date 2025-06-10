@@ -127,14 +127,11 @@ def get_existing_files(dir: str) -> Set[str]:
                     existing_files.add(filename)
 
     elif FILE_ORIGIN == 'gcp':
-        try:
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(BUCKET_NAME)
-            blob_prefix = f"data/{dir}/"
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob_prefix = f"data/{dir}/"
 
-            for blob in bucket.list_blobs(match_glob="**.png", prefix=blob_prefix):
-                existing_files.add(os.path.basename(blob.name))
-        except Exception as e:
-            logger.warning(f"Could not list existing files from GCP: {e}")
+        for blob in bucket.list_blobs(match_glob="**.png", prefix=blob_prefix):
+            existing_files.add(os.path.basename(blob.name))
 
     return existing_files
