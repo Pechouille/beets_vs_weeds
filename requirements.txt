@@ -7,6 +7,6 @@ tensorflow
 torchvision
 google-cloud-storage
 colorama
-glob
 fastapi
 uvicorn
+matplotlib
