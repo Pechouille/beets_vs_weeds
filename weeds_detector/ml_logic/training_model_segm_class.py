@@ -44,7 +44,6 @@ def initialize_model(max_boxes=10, num_classes=1):
     return model
 
 def compile_model(model):
-
     model.compile(
         loss = {
             'class_output': 'binary_crossentropy',
@@ -85,7 +84,6 @@ def train_model(model,
         epochs=epochs,
         batch_size=batch_size,
         validation_split=validation_split,
-        callbacks=[es]
-    )
+        callbacks=[es])
 
     return model, history

@@ -1,26 +1,24 @@
 import time
-import logger
+from requests.exceptions import MissingSchema
+
 from PIL import Image
 import pandas as pd
-from weeds_detector.data import get_filepath_in_directories, get_filepath, get_json_content, get_existing_files
-from weeds_detector.params import *
-from requests.exceptions import MissingSchema
 from weeds_detector.utils.logger import setup_logging
+import logger
+from weeds_detector.data import get_filepath, get_json_content, get_existing_files
+from weeds_detector.params import *
 from weeds_detector.utils.images import save_image, load_image
-
 
 def output_directory():
     """Output directory (cropped_images)"""
     output_dir = f"data/croped_images/croped_{DATA_SIZE}"
     return output_dir
 
-
 def load_data(set_name: str):
     """Load json path and csv path and load data from json"""
     csv_path = get_filepath("image_characteristics.csv")
     data = get_json_content(f"json_{set_name}_set.json")
     return csv_path, data
-
 
 def load_id_to_filename(csv_path: str) -> dict:
     """Map image_id to filename from CSV file and
@@ -34,12 +32,10 @@ def load_id_to_filename(csv_path: str) -> dict:
     id_to_filename = dict(zip(df['id'], df['filename']))
     return id_to_filename
 
-
 def crop_image(image: Image.Image, bbox: list) -> Image.Image:
     """Crop image with bbox from json file"""
     x, y, w, h = bbox
     return image.crop((int(x), int(y), int(x + w), int(y + h)))
-
 
 def build_filename(filename: str, image_id: int, bbox_id: int, category_id: int) -> str:
     """The name of the output file"""
@@ -109,7 +105,7 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
             logger.info(f"✅ {count} | {total_count} | Processed {filename} crops to {output_name} ({rate:.2f} crops/sec). ")
 
         except (FileNotFoundError, MissingSchema) as e:
-            logger.error(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
+            logger.info(f"❌ 1 - Error processing {filename} (ID: {image_id}): {e}")
 
     # Final summary
     elapsed_time = time.time() - start_time
@@ -122,7 +118,6 @@ def crop_annotations(data: dict, id_to_filename: dict, image_dir: list, output_d
     logger.info(f"⏱️  Total time: {elapsed_time:.2f} seconds")
     logger.info(f"📊 Processing rate: {rate:.2f} crops/second")
     logger.info(f"📁 Output directory: {output_dir}")
-
 
 def main(set_name: str):
     """Main execution function"""
@@ -153,9 +148,8 @@ def main(set_name: str):
         logger.info("=" * 60)
 
     except Exception as e:
-        logger.error(f"Fatal error in main process: {e}")
+        logger.info(f"Fatal error in main process: {e}")
         raise
-
 
 if __name__ == "__main__":
     main()
