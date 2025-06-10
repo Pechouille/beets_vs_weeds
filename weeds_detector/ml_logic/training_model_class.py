@@ -1,10 +1,12 @@
 from tensorflow.keras import Sequential, Input, layers, callbacks
+from weeds_detector.params import *
 import numpy as np
 
 def initialize_model():
     """Initialize the Neural Network with random weights"""
     model = Sequential()
-    model.add(Input(shape=(128, 128, 3)))
+    resized = int(RESIZED)
+    model.add(Input(shape=(resized, resized, 3)))
 
     ### First Convolution & MaxPooling
     model.add(layers.Conv2D(16, kernel_size=(4, 4), activation='relu'))
@@ -41,12 +43,13 @@ def train_model(model,
         X: np.ndarray,
         y: np.ndarray,
         batch_size=32,
+        epochs = 100,
         patience=20,
         validation_data=None,
         validation_split=0.3):
     es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
     history = model.fit(X, y,
-                        epochs = 100,
+                        epochs = epochs,
                         batch_size = batch_size,
                         validation_data = validation_data,
                         validation_split = validation_split,
@@ -75,5 +78,5 @@ def evaluate_model(
         # callbacks=None,
         return_dict=True
     )
-    
+
     return metrics
