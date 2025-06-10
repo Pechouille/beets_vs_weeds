@@ -36,7 +36,7 @@ jobs:
       - name: Verify image exists
         run: |
           if ! gcloud artifacts docker images describe \
-            ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:0.1; then
+            ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest; then
             echo "❌ Docker image not found in Artifact Registry"
             exit 1
           fi
@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "🚀 Deploying to Cloud Run..."
           gcloud run deploy ${{ vars.SERVICE_NAME }} \
-            --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:0.1 \
+            --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
             --region ${{ vars.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
