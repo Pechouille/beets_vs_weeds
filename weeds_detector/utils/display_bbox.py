@@ -51,7 +51,7 @@ def display_image_with_bounding_boxes(image_path):
     bounding_boxes = load_bounding_boxes(xml_file_path)
 
     for box in bounding_boxes:
-        rect = patches.Rectangle((box.x_min, box.y_min), box.x_len, box.y_len, linewidth=2, edgecolor=box.color, facecolor=box.color, alpha = 0.3)
+        rect = patches.Rectangle((box.x_min, box.y_min), box.x_len, box.y_len, linewidth=2, edgecolor=box.color, facecolor=box.color, alpha = 0.6)
         axs.add_patch(rect)
 
     plt.show()

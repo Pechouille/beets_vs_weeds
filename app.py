@@ -5,6 +5,7 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 from weeds_detector.utils.bbox_from_UNET import get_bbox_from_mask
+from weeds_detector.api.fast import
 
 
 
