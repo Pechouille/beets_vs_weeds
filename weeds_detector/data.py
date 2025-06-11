@@ -3,6 +3,9 @@ import json
 from weeds_detector.params import *
 from google.cloud import storage
 from typing import Set
+from io import BytesIO
+import requests
+from PIL import Image
 
 def get_filepath(filename: str):
     """
@@ -135,3 +138,23 @@ def get_existing_files(dir: str) -> Set[str]:
             existing_files.add(os.path.basename(blob.name))
 
     return existing_files
+
+def get_content_from_url(url: str):
+    """
+    Fetches an image from a given URL and returns it as a PIL Image object.
+
+    Parameters:
+    url (str): The URL of the image to be fetched.
+
+    Returns:
+    PIL.Image.Image: The image fetched from the URL.
+
+    Raises:
+    requests.exceptions.RequestException: If the request to the URL fails.
+    """
+    response = requests.get(url, timeout=120)
+    if response.status_code == 200:
+        print(f"Load content from url : {url}")
+        return response.content
+    else:
+        print("Error on loading file")
