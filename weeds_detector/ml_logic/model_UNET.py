@@ -218,9 +218,11 @@ def pair_files_image_mask(image_paths, mask_paths):
     """Pair each image with its corresponding mask using filenames."""
     mask_dict = { mask[1]: mask[0] for mask in mask_paths}
     pair_urls = []
+    counter = 1
     for image_url, image_filename in image_paths:
         if image_filename in mask_dict:
-            pair_urls.append([image_url, mask_dict[image_filename]])
+                pair_urls.append([image_url, mask_dict[image_filename]])
+                counter += 1
 
     return pair_urls
 
@@ -232,20 +234,22 @@ def build_dataset(image_dir='images_preprocessed/UNET_images/train', mask_dir='i
     mask_paths = get_all_files_path_and_name_in_directory(mask_dir, [".png"])
     print("Paired image_path and mask_path if mask exist")
     pair_urls = pair_files_image_mask(image_paths, mask_paths)
-    image_mask_list = []
+    image_list = []
+    mask_list = []
     counter = 1
-    nbr_images = len(image_paths)
+    nbr_images = len(pair_urls)
     print("Process each images")
     print(f"Number of image to process : { nbr_images }")
     for image_url, mask_url in pair_urls:
         print(f"{counter} / {nbr_images} : Process Image : {image_url} and Mask : {mask_url}")
         image, mask = process_path(image_url, mask_url)
-        image_mask_list.append([image, mask])
+        image_list.append(image)
+        mask_list.append(mask)
         counter += 1
 
     print("Finish process images")
     print("Define Tensorflow Dataset")
-    dataset = Dataset.from_tensor_slices(image_mask_list)
+    dataset = Dataset.from_tensor_slices((image_list, mask_list))
     print("Shuffle dataset")
     dataset = dataset.shuffle(buffer_size=100)
     print("Build batch")
