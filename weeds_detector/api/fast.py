@@ -16,12 +16,20 @@ from weeds_detector.utils.image_croping import crop_image
 from weeds_detector.ml_logic.registry import load_model
 from weeds_detector.ml_logic.preprocess_model_class import preprocess_features, preprocess_single_image
 
+from weeds_detector.params import *
+from weeds_detector.utils.padding import expand2square
+
+from tensorflow import expand_dims
+
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
 OUTPUT_DIR = "api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
+app.state.model_class = load_model(model_type = 'cnn_classif')
+app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,29 +43,50 @@ app.add_middleware(
 def root():
     return {"message": "Hello, API is running."}
 
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+        X_processed = preprocess_single_image(image)
+
+        model = app.state.model_class
+        results = model.predict(X_processed)
+        prediction = results[0][0]
+
+        if prediction > 0.5:
+            prediction = 1
+        else:
+            prediction = 0
+
+        return {'category': float(prediction)}
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+
 @app.post("/upload/")
 async def create_upload_file(file: UploadFile = File(...)):
     filename = file.filename  # Ne pas renommer
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+       f.write(await file.read())
 
     # Générer l’image annotée
     output_filename = f"boxed_{filename}"
     output_path = os.path.join(OUTPUT_DIR, output_filename)
 
     try:
-        api_display_image_with_bounding_boxes(file_path, save_path=output_path)
+       api_display_image_with_bounding_boxes(file_path, save_path=output_path)
     except FileNotFoundError:
-        return {"error": f"Fichier XML non trouvé pour {filename}. Attendait : data/all/{os.path.splitext(filename)[0]}.xml"}
+       return {"error": f"Fichier XML non trouvé pour {filename}. Attendait : data/all/{os.path.splitext(filename)[0]}.xml"}
     except Exception as e:
-        return {"error": str(e)}
+       return {"error": str(e)}
 
     return FileResponse(output_path, media_type="image/png")
-
-
-
 
 # @app.get("/predict/")
 # async def predict(file: UploadFile = File(...)):
