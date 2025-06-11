@@ -7,12 +7,10 @@ from io import BytesIO
 import requests
 
 from tensorflow.keras.utils import img_to_array
-
 from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_all_files_path_and_name_in_directory
 from weeds_detector.params import *
 from google.cloud import storage
-from tensorflow import expand_dims
 
 from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
 from weeds_detector.utils.images import save_image
@@ -20,8 +18,8 @@ from weeds_detector.utils.images import save_image
 
 def preprocess_features():
     list_of_tensors = []
-    files_list = get_all_files_path_and_name_in_directory(f"croped_images/croped_{CROPED_SIZE}", extensions = [".png"])
-    output_dir, folder_exist = create_folder(f'images_preprocessed/croped_images_resized_{CROPED_SIZE}/{RESIZED}x{RESIZED}')
+    files_list = get_all_files_path_and_name_in_directory(f"croped_images_UNET", extensions = [".png"])
+    output_dir, folder_exist = create_folder(f'images_preprocessed_UNET/{RESIZED}x{RESIZED}')
     storage_client = storage.Client()
     source_bucket = storage_client.bucket(BUCKET_NAME)
 
@@ -44,23 +42,4 @@ def preprocess_features():
 
     X_prepro = np.stack(list_of_tensors, axis=0)
 
-    y = np.zeros(len(X_prepro))
-    i = -1
-
-    for file_path, file_name in files_list:
-        i += 1
-        if file_name[-5] == '1':
-            y[i] = 1
-    y = pd.Series(y)
-
-    return X_prepro, y
-
-def preprocess_single_image(img: Image.Image) -> np.ndarray:
-    
-    resized_value = int(RESIZED)
-    X_processed = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
-    X_processed = img_to_array(X_processed)
-    X_processed = X_processed / 255.0
-    X_processed = expand_dims(X_processed, axis = 0)
-
-    return X_processed
+    return X_prepro
