@@ -221,10 +221,14 @@ def pair_files_image_mask(image_paths, mask_paths):
     counter = 1
     for image_url, image_filename in image_paths:
         if image_filename in mask_dict:
-                pair_urls.append([image_url, mask_dict[image_filename]])
-                counter += 1
+            pair_urls.append([image_url, mask_dict[image_filename]])
+            counter += 1
 
     return pair_urls
+
+def build_dataset_by_patter(pattern, paths):
+    dataset = build_dataset(os.path.join(paths[0], pattern), os.path.join(paths[1], pattern))
+    return dataset
 
 def build_dataset(image_dir='images_preprocessed/UNET_images/train', mask_dir='images_preprocessed/UNET_masks/train', batch_size=16):
     '''Build dataset which are consumed but the train process'''
