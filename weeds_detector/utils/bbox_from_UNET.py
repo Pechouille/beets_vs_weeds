@@ -8,6 +8,7 @@ from skimage.measure import label, regionprops, find_contours
 import os
 from PIL import Image
 from weeds_detector.data import get_all_files_path_and_name_in_directory, get_filepath
+from weeds_detector.utils.images import save_image
 import requests
 from io import BytesIO
 
@@ -99,12 +100,13 @@ def predict_all_images(model, image_folder):
 
     return results
 
-def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
+def crop_images_from_result(results: dict, image_dir: str):
     """
-    Crops and saves sub-images from original full-resolution images (GCP or local).
+    Crop and save sub-images from original full-resolution images,
+    either locally or to GCP, depending on FILE_TARGET.
     """
-    os.makedirs(output_dir, exist_ok=True)
     crop_id = 0
+    folder_name = f"data/croped_images_UNET/"
 
     for filename, bboxes in results.items():
         full_image_path = get_filepath(os.path.join(image_dir, filename))
@@ -113,7 +115,6 @@ def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
             print(f"❌ Image not found: {filename}")
             continue
 
-        # Load image either from GCP public URL or local path
         try:
             if full_image_path.startswith("http"):
                 response = requests.get(full_image_path)
@@ -129,9 +130,8 @@ def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
             crop = image.crop((x, y, x + w, y + h))
 
             crop_filename = f"{os.path.splitext(filename)[0]}_crop_{i}.png"
-            crop_path = os.path.join(output_dir, crop_filename)
+            save_image(crop, folder_name, crop_filename)
 
-            crop.save(crop_path)
             crop_id += 1
 
-    print(f"✅ {crop_id} crops saved in {output_dir}")
+    print(f"✅ {crop_id} crops saved at {folder_name}")
