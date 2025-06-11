@@ -16,23 +16,24 @@ def masked_mse(y_true, y_pred):
     return K.sum(masked_se) / (K.sum(mask) + K.epsilon())
 
 
-def initialize_model(max_boxes=10, num_classes=1):
+def initialize_model(max_boxes=5, num_classes=1):
     resized = int(RESIZED)
     inputs = Input(shape=(resized, resized, 3))
 
     x = layers.Conv2D(16, kernel_size=(4, 4), activation='relu')(inputs)
-    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
+    x = layers.MaxPooling2D((2, 2))(x)
 
     x = layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
 
     x = layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
 
-    x = layers.Conv2D(64, kernel_size=(2, 2), activation='relu')(x)
+    x = layers.Conv2D(128, kernel_size=(3, 3), activation='relu')(x)
+
     x = layers.GlobalAveragePooling2D()(x)  # Remplace Flatten
 
-    x = layers.Dense(128, activation='relu')(x)  # Petit Dense suffisant
+    x = layers.Dense(256, activation='relu')(x)  # Petit Dense suffisant
 
     # Sortie classification : max_boxes x num_classes
     class_output = layers.Dense(max_boxes * num_classes, activation='sigmoid')(x)
