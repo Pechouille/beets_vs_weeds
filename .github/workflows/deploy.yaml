@@ -56,7 +56,6 @@ jobs:
             --cpu=4 \
             --max-instances=10 \
             --timeout=3600 \
-            --cpu-timeout=900 \
             --concurrency=80
 
       - name: Get deployment details
