@@ -8,7 +8,7 @@ from tensorflow import image as tf_image
 from tensorflow import cast, float32, expand_dims
 
 from weeds_detector.utils.images import save_image
-from weeds_detector.utils.mask_tools import get_bbox_from_mask  # on supposera cette fonction ici
+from weeds_detector.utils.bbox_from_UNET import get_bbox_from_mask  # on supposera cette fonction ici
 from weeds_detector.data import get_filepath
 
 
@@ -16,16 +16,10 @@ def prepare_image_for_unet(pil_image: Image.Image, target_size=(256, 256)) -> np
     """
     Prépare une image PIL pour la prédiction UNet.
     """
-    buffer = io.BytesIO()
-    pil_image.save(buffer, format="PNG")
-    buffer.seek(0)
-
-    png = tf_io.read_file(buffer)
-    png = tf_image.decode_image(png, channels=3)
-    png = tf_image.resize(png, list(target_size))
-    png = cast(png, float32) / 255.0
-    png = expand_dims(png, axis=0)
-    return png
+    pil_image = pil_image.resize(target_size)
+    image_array = np.array(pil_image).astype("float32") / 255.0
+    image_tensor = expand_dims(image_array, axis=0)
+    return image_tensor
 
 
 def predict_mask(model, prepared_tensor: np.ndarray, threshold=0.9) -> np.ndarray:

@@ -11,7 +11,7 @@ model, history = train_model(
     model,
     train_dataset,
     batch_size=128,
-    epochs=2,
+    epochs=10,
     patience=10,
     validation_data=val_dataset
 )

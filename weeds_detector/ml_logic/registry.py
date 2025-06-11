@@ -7,6 +7,8 @@ from colorama import Fore, Style
 from glob import glob
 import requests
 
+
+
 def save_model(model: keras.Model, model_type: str) -> None:
     """
     Persist trained model locally on the hard drive at f"{LOCAL_REGISTRY_PATH}/models/{model_type}_{timestamp}.h5"
@@ -34,7 +36,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
         return None
 
 
-def load_model(model_type: str):
+def load_model(model_type: str, custom_objects):
         if MODEL_TARGET == "local":
             print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
             # Get the latest model version name by the timestamp on disk
@@ -59,13 +61,13 @@ def load_model(model_type: str):
             print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
 
             client = storage.Client()
-            blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
+            blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix=f"models/{model_type}_"))
 
             latest_blob = max(blobs, key=lambda x: x.updated)
             latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
             os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
             latest_blob.download_to_filename(latest_model_path_to_save)
-            latest_model = keras.models.load_model(latest_model_path_to_save)
+            latest_model = keras.models.load_model(latest_model_path_to_save, custom_objects=custom_objects, compile=False)
 
             print("✅ Latest model downloaded from cloud storage")
 

@@ -19,17 +19,28 @@ from weeds_detector.ml_logic.preprocess_model_class import preprocess_features, 
 from weeds_detector.params import *
 from weeds_detector.utils.padding import expand2square
 
+from weeds_detector.utils.pipeline_mask_unet_api import (
+    prepare_image_for_unet,
+    predict_mask,
+    crop_from_mask_and_save
+)
+from weeds_detector.ml_logic.model_UNET import dice_loss, dice_coeff, combined_loss
+
 from tensorflow import expand_dims
 
+custom_objects = {
+    "compile_metrics": dice_coeff,
+    "loss": combined_loss,
+}
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
 OUTPUT_DIR = "weeds_detector/api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
-app.state.model_class = load_model(model_type = 'cnn_classif')
-app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
-
+# app.state.model_class = load_model(model_type = 'cnn_classif')
+# app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
+app.state.model_unet_test = load_model(model_type = 'unet_segmentation_local_model_epoch10', custom_objects=custom_objects)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,28 +54,52 @@ app.add_middleware(
 def root():
     return {"message": "Hello, API is running."}
 
-@app.post("/predict/")
-async def predict(file: UploadFile = File(...)):
+# @app.post("/predict/")
+# async def predict(file: UploadFile = File(...)):
+#     try:
+#         contents = await file.read()
+#         image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+#         X_processed = preprocess_single_image(image)
+
+#         model = app.state.model_class
+#         results = model.predict(X_processed)
+#         prediction = results[0][0]
+
+#         if prediction > 0.5:
+#             prediction = 1
+#         else:
+#             prediction = 0
+
+#         return {'category': float(prediction)}
+
+#     except Exception as e:
+#         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/segment/")
+async def segment_and_crop(file: UploadFile = File(...)):
     try:
+        # Lire et ouvrir l’image
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        image_pil = Image.open(io.BytesIO(contents)).convert("RGB")
+        original_size = image_pil.size
 
-        X_processed = preprocess_single_image(image)
+        # Préparation et prédiction
+        image_tensor = prepare_image_for_unet(image_pil)
+        model = app.state.model_unet_test
+        mask_bin = predict_mask(model, image_tensor)
 
-        model = app.state.model_class
-        results = model.predict(X_processed)
-        prediction = results[0][0]
+        # Crops
+        save_dir = "data/croped_images_UNET"
+        results = crop_from_mask_and_save(image_pil, mask_bin, original_size, save_dir, file.filename)
 
-        if prediction > 0.5:
-            prediction = 1
-        else:
-            prediction = 0
-
-        return {'category': float(prediction)}
+        return {
+            "message": f"✅ {len(results)} crops sauvegardés",
+            "bounding_boxes": results
+        }
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
 
 
 @app.post("/upload/")
