@@ -18,7 +18,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save model locally
-    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.keras")
+    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.h5")
     model.save(model_path)
 
     print("✅ Model saved locally")
