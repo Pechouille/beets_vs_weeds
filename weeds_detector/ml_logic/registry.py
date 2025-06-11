@@ -30,6 +30,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(f"models/{model_filename}")
         blob.upload_from_filename(model_path)
+
         print("✅ Model saved to GCS")
         os.remove(model_path)
         print("🗑️ Local model file removed after upload to GCS")
@@ -37,7 +38,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
         return None
 
 
-def load_model(model_type: str, custom_objects):
+def load_model(model_type: str, custom_objects=None):
         if MODEL_TARGET == "local":
             print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
             # Get the latest model version name by the timestamp on disk
@@ -68,7 +69,10 @@ def load_model(model_type: str, custom_objects):
             latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
             os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
             latest_blob.download_to_filename(latest_model_path_to_save)
-            latest_model = keras.models.load_model(latest_model_path_to_save, custom_objects=custom_objects, compile=False)
+            if custom_objects == None:
+                latest_model = keras.models.load_model(latest_model_path_to_save)
+            else:
+                latest_model = keras.models.load_model(latest_model_path_to_save, custom_objects=custom_objects, compile=False)
 
             print("✅ Latest model downloaded from cloud storage")
 

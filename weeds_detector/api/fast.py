@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from torchvision import transforms
 
 from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
 from weeds_detector.utils.image_croping import crop_image
@@ -76,14 +75,16 @@ def root():
 #     except Exception as e:
 #         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/segment/")
-async def segment_and_crop(file: UploadFile = File(...)):
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
     try:
         # Lire et ouvrir l’image
         contents = await file.read()
-        image_pil = Image.open(io.BytesIO(contents)).convert("RGB")
+        bin_image = io.BytesIO(contents)
+        image_pil = Image.open(bin_image).convert("RGB")
         original_size = image_pil.size
-
+        img_base64 = base64.b64encode(bin_image.getvalue()).decode('utf-8')
+        # 1.
         # Préparation et prédiction
         image_tensor = prepare_image_for_unet(image_pil)
         model = app.state.model_unet_test
@@ -94,15 +95,51 @@ async def segment_and_crop(file: UploadFile = File(...)):
         results = crop_from_mask_and_save(image_pil, mask_bin, original_size, save_dir, file.filename)
 
         return {
-            "message": f"✅ {len(results)} crops sauvegardés",
-            "bounding_boxes": results
+            "mask": img_base64,
+            "predicts": {
+                "unet": [{
+                  "bbox": [
+                            772,
+                            59,
+                            810,
+                            75
+                          ],
+                  "class": "beets"
+                },{
+                  "bbox": [
+                            0,
+                            80,
+                            22,
+                            118
+                    ],
+                  "class": "weeds"
+                }
+                         ],
+                "segmt_classif": [{
+                  "bbox": [
+                            322,
+                            80,
+                            375,
+                            109
+                    ],
+                  "class": "beets"
+                },{
+                  "bbox": [
+                        907,
+                        80,
+                        952,
+                        109
+                ],
+                  "class": "weeds"
+                }]
+            }
         }
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.post("/upload/")
+@app.post("/base")
 async def create_upload_file(file: UploadFile = File(...)):
     filename = file.filename  # Ne pas renommer
     file_path = os.path.join(UPLOAD_DIR, filename)
