@@ -1,5 +1,5 @@
 from tensorflow.keras import layers, models, Input, callbacks
-from weeds_detector.params import RESIZED
+from weeds_detector.params import *
 
 import tensorflow.keras.backend as K
 
@@ -21,27 +21,30 @@ def initialize_model(max_boxes=10, num_classes=1):
     inputs = Input(shape=(resized, resized, 3))
 
     x = layers.Conv2D(16, kernel_size=(4, 4), activation='relu')(inputs)
-    #x = layers.MaxPooling2D(pool_size=(2, 2))(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
 
     x = layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
 
     x = layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
 
     x = layers.Conv2D(64, kernel_size=(2, 2), activation='relu')(x)
+    x = layers.GlobalAveragePooling2D()(x)  # Remplace Flatten
 
-    x = layers.Flatten()(x)
-    x = layers.Dense(resized, activation='relu')(x)
+    x = layers.Dense(128, activation='relu')(x)  # Petit Dense suffisant
 
     # Sortie classification : max_boxes x num_classes
     class_output = layers.Dense(max_boxes * num_classes, activation='sigmoid')(x)
     class_output = layers.Reshape((max_boxes, num_classes), name='class_output')(class_output)
 
     # Sortie bounding boxes : max_boxes x 4 coordonnées
-    bbox_output = layers.Dense(max_boxes * 4, activation='sigmoid')(x)  # sigmoid: pour normaliser entre 0 et 1
+    bbox_output = layers.Dense(max_boxes * 4, activation='sigmoid')(x)
     bbox_output = layers.Reshape((max_boxes, 4), name='bbox_output')(bbox_output)
 
     model = models.Model(inputs=inputs, outputs=[class_output, bbox_output])
     return model
+
 
 def compile_model(model):
     model.compile(
