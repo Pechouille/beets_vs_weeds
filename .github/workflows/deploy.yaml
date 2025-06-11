@@ -51,11 +51,11 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --port 8080 \
-            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},CHUNK_SIZE=${{ vars.CHUNK_SIZE || 200 }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.ARTIFACT_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME || 'beets_vs_weeds' }},RESIZED=${{ vars.RESIZED || '256' }}" \
+            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},CHUNK_SIZE=${{ vars.CHUNK_SIZE || 200 }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.ARTIFACT_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME || 'beets_vs_weeds' }}DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},RESIZED=${{ vars.RESIZED || '256' }}" \
             --memory=12Gi \
             --cpu=4 \
             --max-instances=10 \
-            --timeout=3600 \
+            --timeout=6400 \
             --concurrency=80
 
       - name: Get deployment details
