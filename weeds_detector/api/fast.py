@@ -27,7 +27,8 @@ OUTPUT_DIR = "api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
-app.state.model1 = load_model(model_type = 'cnn_classif')
+app.state.model_class = load_model(model_type = 'cnn_classif')
+app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
 
 
 app.add_middleware(
@@ -42,47 +43,50 @@ app.add_middleware(
 def root():
     return {"message": "Hello, API is running."}
 
-@app.get("/predict")
-def predict():
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
 
-    resized_value = int(RESIZED)
-    X_processed = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
-    X_processed = img_to_array(X_processed)
-    X_processed = X_processed / 255.0
+        X_processed = preprocess_single_image(image)
 
-    X_processed = expand_dims(X_processed, axis = 0)
+        model = app.state.model_class
+        results = model.predict(X_processed)
+        prediction = results[0][0]
 
-    prediction = app.state.model.predict(X_processed)
+        if prediction > 0.5:
+            prediction = 1
+        else:
+            prediction = 0
 
-    return {'category': float(prediction)}
+        return {'category': float(prediction)}
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 
+@app.post("/upload/")
+async def create_upload_file(file: UploadFile = File(...)):
+    filename = file.filename  # Ne pas renommer
+    file_path = os.path.join(UPLOAD_DIR, filename)
 
-
-
-
-
-#@app.post("/upload/")
-#async def create_upload_file(file: UploadFile = File(...)):
-#    filename = file.filename  # Ne pas renommer
-#    file_path = os.path.join(UPLOAD_DIR, filename)
-#
-#   with open(file_path, "wb") as f:
-#       f.write(await file.read())
+    with open(file_path, "wb") as f:
+       f.write(await file.read())
 
     # Générer l’image annotée
-#    output_filename = f"boxed_{filename}"
-#   output_path = os.path.join(OUTPUT_DIR, output_filename)
-#
-#   try:
-#       api_display_image_with_bounding_boxes(file_path, save_path=output_path)
-#   except FileNotFoundError:
-#       return {"error": f"Fichier XML non trouvé pour {filename}. Attendait : data/all/{os.path.splitext(filename)[0]}.xml"}
-#   except Exception as e:
-#       return {"error": str(e)}
+    output_filename = f"boxed_{filename}"
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
 
-#    return FileResponse(output_path, media_type="image/png")
+    try:
+       api_display_image_with_bounding_boxes(file_path, save_path=output_path)
+    except FileNotFoundError:
+       return {"error": f"Fichier XML non trouvé pour {filename}. Attendait : data/all/{os.path.splitext(filename)[0]}.xml"}
+    except Exception as e:
+       return {"error": str(e)}
+
+    return FileResponse(output_path, media_type="image/png")
 
 # @app.get("/predict/")
 # async def predict(file: UploadFile = File(...)):

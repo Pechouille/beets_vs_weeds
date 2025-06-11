@@ -19,7 +19,7 @@ model, history = train_model(
     X_prepro,
     y_class,
     y_bbox,
-    batch_size=32,
+    batch_size=64,
     patience=20,
     epochs=400,
     validation_split=0.3
