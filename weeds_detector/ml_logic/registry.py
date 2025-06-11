@@ -1,6 +1,6 @@
 import time
 import os
-from weeds_detector.params import *
+from weeds_detector.params import LOCAL_REGISTRY_PATH, BUCKET_NAME, MODEL_TARGET
 from tensorflow import keras
 from google.cloud import storage
 from colorama import Fore, Style
