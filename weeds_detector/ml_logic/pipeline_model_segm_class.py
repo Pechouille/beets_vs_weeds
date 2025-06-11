@@ -19,9 +19,9 @@ model, history = train_model(
     X_prepro,
     y_class,
     y_bbox,
-    batch_size=64,
-    patience=20,
-    epochs=400,
+    batch_size=128,
+    patience=2,
+    epochs=2,
     validation_split=0.3
 )
 print('Model trained')

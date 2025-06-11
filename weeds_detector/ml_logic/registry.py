@@ -18,7 +18,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save model locally
-    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.h5")
+    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.keras")
     model.save(model_path)
 
     print("✅ Model saved locally")
@@ -30,8 +30,9 @@ def save_model(model: keras.Model, model_type: str) -> None:
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(f"models/{model_filename}")
         blob.upload_from_filename(model_path)
-
         print("✅ Model saved to GCS")
+        os.remove(model_path)
+        print("🗑️ Local model file removed after upload to GCS")
 
         return None
 
