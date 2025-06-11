@@ -8,7 +8,7 @@ from tensorflow import image as tf_image
 from tensorflow import cast, float32, expand_dims
 
 from weeds_detector.utils.images import save_image
-from weeds_detector.utils.bbox_from_UNET import get_bbox_from_mask  # on supposera cette fonction ici
+from weeds_detector.utils.bbox_from_UNET import get_bbox_from_mask
 from weeds_detector.data import get_filepath
 
 

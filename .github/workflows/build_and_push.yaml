@@ -1,6 +1,7 @@
 name: Build and Push to Artifact Registry
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [closed]
     branches: ["master"]
