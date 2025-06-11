@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-
+from torchvision import transforms
 
 from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
 from weeds_detector.utils.image_croping import crop_image
@@ -18,7 +18,7 @@ from weeds_detector.ml_logic.preprocess_model_class import preprocess_features, 
 
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
-OUTPUT_DIR = "api/outputs/"
+OUTPUT_DIR = "weeds_detector/api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
@@ -56,23 +56,27 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     return FileResponse(output_path, media_type="image/png")
 
+app.state.model = load_model("cnn_classif_20250611-055246.h5")
 
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    try:
+        # Lire l'image uploadée
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
 
+        # Prétraitement
+        X = preprocess_single_image(image)
 
-# @app.get("/predict/")
-# async def predict(file: UploadFile = File(...)):
-#     # Lire l'image uploadée
-#     contents = await file.read()
-#     image = Image.open(io.BytesIO(contents)).convert("RGB")
+        model = app.state.model
 
-#     # Prétraitement
-#     X = preprocess_single_image(image)
+        # Prédiction
+        pred = model.predict(X)[0][0]
 
-#     # Prédiction
-#     app.state.model = load_model()
-#     pred = app.state.model.predict(X)[0][0]  # sortie sigmoide entre 0 et 1
+        # Seuil de classification
+        classe = int(pred > 0.5)
 
-#     # Seuil à 0.5 par défaut pour classer
-#     classe = int(pred > 0.5)
+        return {"prediction": classe, "confidence": float(pred)}
 
-#     return {"prediction": classe, "confidence": float(pred)}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
