@@ -6,7 +6,7 @@ import requests
 from io import BytesIO
 from tensorflow.keras.utils import img_to_array, save_img
 from PIL import Image
-from weeds_detector.params import *
+from weeds_detector.params import FILE_ORIGIN, BUCKET_NAME, RESIZED
 from google.cloud import storage
 
 from weeds_detector.utils.padding import expand2square
