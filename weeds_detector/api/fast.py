@@ -37,8 +37,8 @@ OUTPUT_DIR = "weeds_detector/api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
-# app.state.model_class = load_model(model_type = 'cnn_classif')
-# app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
+app.state.model_class = load_model(model_type = 'cnn_classif')
+app.state.model_segm_classif = load_model(model_type = 'cnn_segm_classif_final')
 app.state.model_unet_test = load_model(model_type = 'unet_segmentation_local_model_epoch10', custom_objects=custom_objects)
 
 app.add_middleware(
@@ -53,87 +53,43 @@ app.add_middleware(
 def root():
     return {"message": "Hello, API is running."}
 
-# @app.post("/predict/")
-# async def predict(file: UploadFile = File(...)):
-#     try:
-#         contents = await file.read()
-#         image = Image.open(io.BytesIO(contents)).convert("RGB")
-
-#         X_processed = preprocess_single_image(image)
-
-#         model = app.state.model_class
-#         results = model.predict(X_processed)
-#         prediction = results[0][0]
-
-#         if prediction > 0.5:
-#             prediction = 1
-#         else:
-#             prediction = 0
-
-#         return {'category': float(prediction)}
-
-#     except Exception as e:
-#         return JSONResponse(status_code=500, content={"error": str(e)})
-
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
         # Lire et ouvrir l’image
-        contents = await file.read()
-        bin_image = io.BytesIO(contents)
-        image_pil = Image.open(bin_image).convert("RGB")
+        uploaded_image = await file.read()
+        image_pil = Image.open(io.BytesIO(uploaded_image)).convert("RGB")
         original_size = image_pil.size
-        img_base64 = base64.b64encode(bin_image.getvalue()).decode('utf-8')
-        # 1.
-        # Préparation et prédiction
+        # Preprocess UNET
         image_tensor = prepare_image_for_unet(image_pil)
-        model = app.state.model_unet_test
-        mask_bin = predict_mask(model, image_tensor)
+        mask_bin = predict_mask(app.state.model_unet_test, image_tensor)
 
+        # Convertir 0/1 en 0/255
+        mask_uint8 = (mask_bin * 255).astype(np.uint8)
+
+        # Créer une image PIL à partir du masque
+        mask_img = Image.fromarray(mask_uint8)
+
+        # Sauver dans un buffer
+        buffer = io.BytesIO()
+        mask_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        base64_mask = base64.b64encode(buffer.getvalue()).decode('utf-8')
         # Crops
         save_dir = "data/croped_images_UNET"
-        results = crop_from_mask_and_save(image_pil, mask_bin, original_size, save_dir, file.filename)
+        unet_bboxs, images_crops = crop_from_mask_and_save(image_pil, mask_bin, original_size, save_dir, file.filename)
+        for unet_bbox, image_crop in zip(unet_bboxs, images_crops):
+            X_processed = preprocess_single_image(image_crop["image_crop"])
+            crop_classif = app.state.model_class.predict(X_processed)
+            unet_bbox["class"] = round(crop_classif[0][0])
+
+
 
         return {
-            "mask": img_base64,
+            "mask": base64_mask,
             "predicts": {
-                "unet": [{
-                  "bbox": [
-                            772,
-                            59,
-                            810,
-                            75
-                          ],
-                  "class": "beets"
-                },{
-                  "bbox": [
-                            0,
-                            80,
-                            22,
-                            118
-                    ],
-                  "class": "weeds"
-                }
-                         ],
-                "segmt_classif": [{
-                  "bbox": [
-                            322,
-                            80,
-                            375,
-                            109
-                    ],
-                  "class": "beets"
-                },{
-                  "bbox": [
-                        907,
-                        80,
-                        952,
-                        109
-                ],
-                  "class": "weeds"
-                }]
-            }
-        }
+                "unet": unet_bboxs
+                }}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

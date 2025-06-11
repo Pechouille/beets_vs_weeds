@@ -46,10 +46,14 @@ def crop_from_mask_and_save(pil_image: Image.Image, mask_binary: np.ndarray,
     )
 
     results = []
+    crop_images = []
     for i, (x, y, w, h) in enumerate(bboxes):
         xmin, ymin, xmax, ymax = int(x), int(y), int(x + w), int(y + h)
         crop = pil_image.crop((xmin, ymin, xmax, ymax))
         crop_filename = f"{os.path.splitext(filename)[0]}_crop_{i}.png"
+        crop_images.append({ "id": i,
+                            "image_crop": crop
+                            })
         save_image(crop, save_dir, crop_filename)
 
         results.append({
@@ -58,4 +62,4 @@ def crop_from_mask_and_save(pil_image: Image.Image, mask_binary: np.ndarray,
             "class": ""  # à remplir plus tard si besoin
         })
 
-    return results
+    return results, crop_images
