@@ -26,4 +26,4 @@ model, history = train_model(
 )
 print('Model trained')
 
-save_model(model, 'cnn_segm_classif_2')
+save_model(model, 'cnn_segm_classif_final')

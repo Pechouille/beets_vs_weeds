@@ -16,8 +16,8 @@ def save_model(model: keras.Model, model_type: str) -> None:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save model locally
-    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.keras")
-    model.save(model_path)
+    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.weights.h5")
+    model.save_weights(model_path)
 
     print("✅ Model saved locally")
 
