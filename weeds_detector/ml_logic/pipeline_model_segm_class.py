@@ -20,10 +20,10 @@ model, history = train_model(
     y_class,
     y_bbox,
     batch_size=128,
-    patience=2,
-    epochs=2,
+    patience=20,
+    epochs=200,
     validation_split=0.3
 )
 print('Model trained')
 
-save_model(model, 'cnn_segm_classif_final')
+save_model(model, 'cnn_segm_classif_final2')
