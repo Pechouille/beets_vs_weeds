@@ -6,15 +6,15 @@ from tensorflow.keras import Input, callbacks, Model
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, concatenate
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.datasets import Dataset
+from tensorflow.keras.utils import get_file
+from tensorflow.data import Dataset, AUTOTUNE
 from tensorflow.image import resize, decode_png
 from tensorflow.io import read_file
-from tensorflow.data.Dataset import from_tensor_slices
-from tensorflow.data import AUTOTUNE
-from tensorflow import Tensor, cast, clip_by_value, reduce_sum, reduce_mean, float32, uint8
+from tensorflow import Tensor, cast, clip_by_value, reduce_sum, reduce_mean, float32, uint8, constant
 from typing import Tuple
+from weeds_detector.data import get_all_files_path_and_name_in_directory, get_content_from_url
 
-from weeds_detector.params import RESIZED
+from weeds_detector.params import RESIZED, FILE_ORIGIN
 
 def dice_coeff(y_true: Tensor, y_pred: Tensor, smooth: float = 1e-6) -> float:
     """
@@ -192,28 +192,67 @@ def process_path(image_path: str, mask_path: str):
     '''This methode is only used in load_dataset and shall not be used anywhere else
     it automaically normalize the input image before inserting them in the dataset'''
     # Chargement du fichier image
+    print(f"Process image : {image_path} and mask : {mask_path}")
     image_size = int(RESIZED)
-    image = read_file(image_path)
+
+    if FILE_ORIGIN == 'gcp':
+        image = get_content_from_url(image_path)
+        mask = get_content_from_url(mask_path)
+    else:
+        image = read_file(image_path)
+        mask = read_file(mask_path)
+
+    print("Decode image PNG")
     image = decode_png(image, channels=3)  # couleur
     image = resize(image, [image_size, image_size])
     image = cast(image, float32) / 255.0  # normalisation [0, 1]
 
-    # Chargement du masque
-    mask = read_file(mask_path)
+    print("Decode mask PNG")
     mask = decode_png(mask, channels=1)  # niveau de gris (binaire ou multiclasses)
     mask = resize(mask, [image_size, image_size], method='nearest')  # nearest pour préserver les classes
-    mask = cast(mask, uint8)  # typiquement les masques sont des entiers (classe 0, 1, 2…)
+    mask = cast(mask, float32) / 255.0  # typiquement les masques sont des entiers (classe 0, 1, 2…)
 
     return image, mask
 
-def build_dataset(image_dir, mask_dir, batch_size=16):
-    '''Build dataset which are consumed but the train process'''
-    image_paths = sorted([os.path.join(image_dir, fname) for fname in os.listdir(image_dir)])
-    mask_paths = sorted([os.path.join(mask_dir, fname) for fname in os.listdir(mask_dir)])
+def pair_files_image_mask(image_paths, mask_paths):
+    """Pair each image with its corresponding mask using filenames."""
+    mask_dict = { mask[1]: mask[0] for mask in mask_paths}
+    pair_urls = []
+    counter = 1
+    for image_url, image_filename in image_paths:
+        if image_filename in mask_dict:
+            pair_urls.append([image_url, mask_dict[image_filename]])
+            counter += 1
 
-    dataset = from_tensor_slices((image_paths, mask_paths))
-    dataset = dataset.map(process_path, num_parallel_calls=AUTOTUNE)
+    return pair_urls
+
+def build_dataset(image_dir='images_preprocessed/UNET_images/train', mask_dir='images_preprocessed/UNET_masks/train', batch_size=16):
+    '''Build dataset which are consumed but the train process'''
+    print("Start Build Dataset")
+    print("Load files names from directories")
+    image_paths = get_all_files_path_and_name_in_directory(image_dir, [".png"])
+    mask_paths = get_all_files_path_and_name_in_directory(mask_dir, [".png"])
+    print("Paired image_path and mask_path if mask exist")
+    pair_urls = pair_files_image_mask(image_paths, mask_paths)
+    image_list = []
+    mask_list = []
+    counter = 1
+    nbr_images = len(pair_urls)
+    print("Process each images")
+    print(f"Number of image to process : { nbr_images }")
+    for image_url, mask_url in pair_urls:
+        print(f"{counter} / {nbr_images} : Process Image : {image_url} and Mask : {mask_url}")
+        image, mask = process_path(image_url, mask_url)
+        image_list.append(image)
+        mask_list.append(mask)
+        counter += 1
+
+    print("Finish process images")
+    print("Define Tensorflow Dataset")
+    dataset = Dataset.from_tensor_slices((image_list, mask_list))
+    print("Shuffle dataset")
     dataset = dataset.shuffle(buffer_size=100)
+    print("Build batch")
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(AUTOTUNE)
     return dataset

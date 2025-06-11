@@ -1,4 +1,4 @@
-name: Deploy Docker Image from Artifact Registry to Compute Engine
+name: Deploy Docker Image from Artifact Registry to Cloud Run
 
 on:
   workflow_dispatch:
@@ -17,33 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create env_vars.yaml
-        run: |
-          cat <<EOF > env_vars.yaml
-          env:
-          - name: PORT
-            value: "8080"
-          - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
-          - name: DATA_SIZE
-            value: "${{ env.DATA_SIZE }}"
-          - name: CHUNK_SIZE
-            value: "${{ env.CHUNK_SIZE }}"
-          - name: FILE_ORIGIN
-            value: "gcp"
-          - name: GCP_PROJECT
-            value: "${{ env.GCP_PROJECT }}"
-          - name: GCP_REGION
-            value: "${{ env.GCP_REGION }}"
-          - name: BUCKET_NAME
-            value: "${{ env.BUCKET_NAME }}"
-          EOF
-
       - id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: "${{ secrets.SERVICE_ACCOUNT_KEY }}"
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ vars.PROJECT_ID }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -53,54 +31,40 @@ jobs:
 
       - name: Docker auth
         run: |
-          gcloud auth configure-docker ${{ env.ARTIFACT_REGION }}-docker.pkg.dev --quiet
+          gcloud auth configure-docker ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev --quiet
 
       - name: Verify image exists
         run: |
           if ! gcloud artifacts docker images describe \
-            ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest; then
+            ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest; then
             echo "❌ Docker image not found in Artifact Registry"
             exit 1
           fi
           echo "✅ Docker image verified in Artifact Registry"
 
-      - name: Create or update instance
+      - name: Deploy to Cloud Run
         run: |
-          if ! gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} > /dev/null 2>&1; then
-            echo "🚀 Creating new instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
-            gcloud compute instances create-with-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
-              --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
-              --machine-type=${{ env.COMPUTE_ENGINE_MACHINE_TYPE }} \
-              --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
-              --container-restart-policy=always \
-              --container-env-file=env_vars.yaml \
-              --tags=http-server \
-              --scopes=https://www.googleapis.com/auth/cloud-platform \
-              --boot-disk-size=100GB \
-              --boot-disk-type=pd-standard \
-              --image-family=cos-stable \
-              --image-project=cos-cloud
-          else
-            echo "🔄 Instance exists, updating container..."
-            gcloud compute instances update-container ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
-              --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
-              --container-image=${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_IMAGE_NAME }}:latest \
-              --container-env-file=env_vars.yaml
-          fi
-
-      - name: Wait for instance to be ready
-        run: |
-          echo "⏳ Waiting for instance to be ready..."
-          timeout 300 bash -c 'until gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} --zone=${{ env.COMPUTE_ENGINE_ZONE }} --format="get(status)" | grep -q "RUNNING"; do sleep 10; done'
+          echo "🚀 Deploying to Cloud Run..."
+          gcloud run deploy ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }} \
+            --image ${{ vars.ARTIFACT_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest \
+            --region ${{ vars.ARTIFACT_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --set-env-vars="DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},CHUNK_SIZE=${{ vars.CHUNK_SIZE || 200 }},FILE_ORIGIN=gcp,MODEL_TARGET=gcs,GCP_PROJECT=${{ vars.PROJECT_ID }},GCP_REGION=${{ vars.ARTIFACT_REGION }},BUCKET_NAME=${{ vars.BUCKET_NAME || 'beets_vs_weeds' }}DATA_SIZE=${{ vars.DATA_SIZE || 'all' }},RESIZED=${{ vars.RESIZED || '256' }}" \
+            --memory=12Gi \
+            --cpu=4 \
+            --max-instances=10 \
+            --timeout=3600 \
+            --concurrency=80
 
       - name: Get deployment details
         run: |
-          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }} \
-            --zone=${{ env.COMPUTE_ENGINE_ZONE }} \
-            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          SERVICE_URL=$(gcloud run services describe ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }} \
+            --region=${{ vars.ARTIFACT_REGION }} \
+            --format='value(status.url)')
 
-          echo "🎉 Application deployed successfully!"
-          echo "📍 Instance: ${{ env.COMPUTE_ENGINE_INSTANCE_NAME }}"
-          echo "🌍 Zone: ${{ env.COMPUTE_ENGINE_ZONE }}"
-          echo "🔗 External IP: $EXTERNAL_IP"
-          echo "🌐 Access URL: http://$EXTERNAL_IP:8080"
+          echo "🎉 Application deployed successfully to Cloud Run!"
+          echo "📍 Service: ${{ vars.SERVICE_NAME || 'beets-vs-weeds-api-prod' }}"
+          echo "🌍 Region: ${{ vars.ARTIFACT_REGION }}"
+          echo "🌐 Service URL: $SERVICE_URL"

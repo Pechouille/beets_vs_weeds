@@ -1,5 +1,20 @@
 from tensorflow.keras import layers, models, Input, callbacks
-from weeds_detector.params import *
+from weeds_detector.params import RESIZED
+
+import tensorflow.keras.backend as K
+
+def masked_mse(y_true, y_pred):
+    # Mask: 1 if bbox ≠ [0,0,0,0], else 0
+    mask = K.cast(K.any(y_true != 0.0, axis=-1), dtype='float32')  # shape: (batch, max_boxes)
+    mask = K.expand_dims(mask, axis=-1)  # shape: (batch, max_boxes, 1)
+    mask = K.repeat_elements(mask, 4, axis=-1)  # shape: (batch, max_boxes, 4)
+
+    # Apply mask to error
+    squared_error = K.square(y_true - y_pred)
+    masked_se = squared_error * mask
+
+    return K.sum(masked_se) / (K.sum(mask) + K.epsilon())
+
 
 def initialize_model(max_boxes=10, num_classes=1):
     resized = int(RESIZED)
@@ -32,7 +47,7 @@ def compile_model(model):
     model.compile(
         loss = {
             'class_output': 'binary_crossentropy',
-            'bbox_output': 'mean_squared_error'
+            'bbox_output': masked_mse
         },
         metrics = {
             'class_output': ['precision'],
@@ -44,25 +59,31 @@ def compile_model(model):
     return model
 
 def train_model(model,
-        X,
-        y_class,
-        y_bbox,
-        mask,
-        batch_size=32,
-        patience=20,
-        epochs = 100,
-        validation_split=0.3):
+                X,
+                y_class,
+                y_bbox,
+                batch_size=7,
+                patience=20,
+                epochs=100,
+                validation_split=0.3):
 
     es = callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
 
+    # Cibles à prédire
+    y_targets = {
+        'class_output': y_class,
+        'bbox_output': y_bbox
+    }
+
+    print("y_class shape:", y_class.shape)
+    print("y_bbox shape:", y_bbox.shape)
+
     history = model.fit(
         X,
-        {'class_output': y_class, 'bbox_output': y_bbox},
-        sample_weight={'class_output': mask, 'bbox_output': mask},
+        y_targets,
         epochs=epochs,
         batch_size=batch_size,
         validation_split=validation_split,
-        callbacks=[es]
-    )
+        callbacks=[es])
 
     return model, history

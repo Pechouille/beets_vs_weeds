@@ -1,11 +1,11 @@
 import time
 import os
-from weeds_detector.params import *
+from weeds_detector.params import LOCAL_REGISTRY_PATH, BUCKET_NAME, MODEL_TARGET
 from tensorflow import keras
 from google.cloud import storage
 from colorama import Fore, Style
-import glob
-
+from glob import glob
+import requests
 
 def save_model(model: keras.Model, model_type: str) -> None:
     """
@@ -16,7 +16,7 @@ def save_model(model: keras.Model, model_type: str) -> None:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save model locally
-    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.h5")
+    model_path = os.path.join(LOCAL_REGISTRY_PATH, "models", f"{model_type}_{timestamp}.keras")
     model.save(model_path)
 
     print("✅ Model saved locally")
@@ -28,8 +28,9 @@ def save_model(model: keras.Model, model_type: str) -> None:
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(f"models/{model_filename}")
         blob.upload_from_filename(model_path)
-
         print("✅ Model saved to GCS")
+        os.remove(model_path)
+        print("🗑️ Local model file removed after upload to GCS")
 
         return None
 
@@ -55,20 +56,18 @@ def load_model(model_type: str):
             return latest_model
 
         elif MODEL_TARGET == "gcs":
+
             print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
+
             client = storage.Client()
-            blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
-            try:
-                latest_blob = max(blobs, key=lambda x: x.updated)
-                latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
-                latest_blob.download_to_filename(latest_model_path_to_save)
+            blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix=f"models/{model_type}_"))
 
-                latest_model = keras.models.load_model(latest_model_path_to_save)
+            latest_blob = max(blobs, key=lambda x: x.updated)
+            latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
+            os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
+            latest_blob.download_to_filename(latest_model_path_to_save)
+            latest_model = keras.models.load_model(latest_model_path_to_save)
 
-                print("✅ Latest model downloaded from cloud storage")
+            print("✅ Latest model downloaded from cloud storage")
 
-                return latest_model
-            except:
-                print(f"\n❌ No model found in GCS bucket {BUCKET_NAME}")
-
-                return None
+            return latest_model
