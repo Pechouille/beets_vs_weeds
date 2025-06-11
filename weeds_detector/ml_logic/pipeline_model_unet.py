@@ -10,9 +10,9 @@ model = compile_model(model)
 model, history = train_model(
     model,
     train_dataset,
-    batch_size=64,
-    epochs=300,
-    patience=20,
+    batch_size=128,
+    epochs=2,
+    patience=10,
     validation_data=val_dataset
 )
 
