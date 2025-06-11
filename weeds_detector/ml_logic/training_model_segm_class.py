@@ -1,5 +1,5 @@
 from tensorflow.keras import layers, models, Input, callbacks
-from weeds_detector.params import *
+from weeds_detector.params import RESIZED
 
 import tensorflow.keras.backend as K
 
@@ -21,7 +21,7 @@ def initialize_model(max_boxes=10, num_classes=1):
     inputs = Input(shape=(resized, resized, 3))
 
     x = layers.Conv2D(16, kernel_size=(4, 4), activation='relu')(inputs)
-    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
+    #x = layers.MaxPooling2D(pool_size=(2, 2))(x)
 
     x = layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
 

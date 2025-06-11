@@ -11,6 +11,7 @@ from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_all_files_path_and_name_in_directory
 from weeds_detector.params import *
 from google.cloud import storage
+from tensorflow import expand_dims
 
 from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
 from weeds_detector.utils.images import save_image
@@ -53,16 +54,12 @@ def preprocess_features():
 
     return X_prepro, y
 
-
-# API FUNCTION (need to be changed)
 def preprocess_single_image(img: Image.Image) -> np.ndarray:
-    transform = transforms.PILToTensor()
+    
+    resized_value = int(RESIZED)
+    X_processed = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
+    X_processed = img_to_array(X_processed)
+    X_processed = X_processed / 255.0
+    X_processed = expand_dims(X_processed, axis = 0)
 
-    # Adapté de ta fonction expand2square + resize(128,128)
-    new_image = expand2square(img, (0, 0, 0)).resize((128, 128))
-
-    tensor = transform(new_image).permute(1, 2, 0).numpy()  # (H,W,C)
-    tensor = tensor / 255.0
-    tensor = np.expand_dims(tensor, axis=0)  # batch dimension
-
-    return tensor
+    return X_processed
