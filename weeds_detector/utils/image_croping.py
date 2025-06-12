@@ -1,4 +1,6 @@
 import time
+from .logger import logger
+
 from requests.exceptions import MissingSchema
 
 from PIL import Image

@@ -226,6 +226,7 @@ def pair_files_image_mask(image_paths, mask_paths):
 
     return pair_urls
 
+
 def build_dataset(image_dir='images_preprocessed/UNET_images/train', mask_dir='images_preprocessed/UNET_masks/train', batch_size=16):
     '''Build dataset which are consumed but the train process'''
     print("Start Build Dataset")
@@ -259,11 +260,11 @@ def build_dataset(image_dir='images_preprocessed/UNET_images/train', mask_dir='i
 
 
 def train_model(model: Model,
-                dataset: Dataset,
+                dataset,
                 batch_size: int = 32,
                 patience: int = 20,
                 epochs: int = 50,
-                validation_data: Dataset = None,
+                validation_data = None,
                 validation_split: float = 0.3) -> Tuple[Model, dict]:
     """
     Train the model.
@@ -329,7 +330,7 @@ def evaluate_model(
 
     return metrics
 
-def predict(model: Model, image_path: str, image_size: int):
+def predict_model(model: Model, image_path: str, image_size: int):
     """
     Predicts the mask for a given image using the provided model.
 
@@ -346,4 +347,5 @@ def predict(model: Model, image_path: str, image_size: int):
     image = decode_png(image, channels=3)  # couleur
     image = resize(image, [image_size, image_size])
     image = cast(image, float32) / 255.0  # normalisation [0, 1]
+    image = expand_dims(image, axis=0)
     return model.predict(image)

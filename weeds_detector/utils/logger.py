@@ -33,3 +33,9 @@ def setup_logging():
         handler.addFilter(HostnameFilter())
 
     return logging.getLogger(__name__)
+
+#define the logger for all clients
+# import the logger using
+# from .logger import logger
+logger = setup_logging()
+

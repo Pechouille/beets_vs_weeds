@@ -9,7 +9,10 @@ google-cloud-storage
 colorama
 fastapi
 uvicorn
+python-multipart
+streamlit
+requests
 matplotlib
 logger
+scikit_image
 python-multipart
-scikit-image
