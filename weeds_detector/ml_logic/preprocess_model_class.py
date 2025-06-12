@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from io import BytesIO
 import requests
-
 from tensorflow.keras.utils import img_to_array
 from weeds_detector.utils.padding import expand2square
 from weeds_detector.data import get_all_files_path_and_name_in_directory
@@ -14,7 +13,6 @@ from google.cloud import storage
 from tensorflow import expand_dims
 
 from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
-from weeds_detector.utils.images import save_image
 
 
 def preprocess_features():
@@ -55,7 +53,7 @@ def preprocess_features():
     return X_prepro, y
 
 def preprocess_single_image(img: Image.Image) -> np.ndarray:
-    
+
     resized_value = int(RESIZED)
     X_processed = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
     X_processed = img_to_array(X_processed)
