@@ -5,8 +5,12 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 from weeds_detector.utils.bbox_from_UNET import get_bbox_from_mask
-from weeds_detector.api.fast import
+import requests
+import json
+import base64
+import io
 
+DUMMY_MODE = False
 
 
 import streamlit as st
@@ -21,13 +25,27 @@ pred_selector = {
 }
 
 TEMP_STATIC_IMAGE = "./static/temp.png"
+API_URL = "https://beets-vs-weeds-api-prod-zpq6nq7z5q-od.a.run.app"
 
-def call_predict_API(model_name:str, image_path:str) -> object:
+def call_predict_API(model_name:str, uploadedFile:object) -> object:
     '''Simulate the call to the UNET segmentation computing API'''
-    '''TODO: replace content by a call to the corresponding API'''
-    time.sleep(10) # place for the UNET predict
-    mask_image_name = pred_selector[image_path]
-    mask_image = Image.open(os.path.join("./static/", mask_image_name))
+    mask_image = None
+
+    if DUMMY_MODE:
+        time.sleep(10) # place for the UNET predict
+        mask_image_name = pred_selector[uploadedFile.name]
+        mask_image = Image.open(os.path.join("./static/", mask_image_name))
+    else:
+        headers = {
+            "accept": "application/json"
+        }
+
+        files = {
+            "file": ("bbro_bbro_07_05_2021_v_0_3.png", open("./data/test/bbro_bbro_07_05_2021_v_0_3.png", "rb"), "image/png")
+        }
+        response = requests.post(API_URL, files=files, headers=headers, verify=False)
+        image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
+        mask_image = Image.open(io.BytesIO(image_bytes))
 
     return mask_image
 
@@ -58,12 +76,12 @@ if uploaded_file is not None:
     st.image(image, caption=uploaded_file.name, use_container_width=True)
 
 ############################################################################
-### Segmentation prediction on the image ####################################
+### Segmentation prediction on the image ###################################
 
     #result mask display
     st.text("Predicted mask:")
     with st.spinner("Computing segmentation, please wait...", show_time=True):
-        mask_image = call_predict_API(model_option, uploaded_file.name)
+        mask_image = call_predict_API(model_option, uploaded_file)
     st.image(mask_image, caption=f"Mask predicted from {uploaded_file.name}", use_container_width = True)
 
 ############################################################################

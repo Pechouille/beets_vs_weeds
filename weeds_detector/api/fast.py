@@ -10,7 +10,6 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-
 from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
 from weeds_detector.utils.image_croping import crop_image
 from weeds_detector.ml_logic.registry import load_model
@@ -19,17 +18,28 @@ from weeds_detector.ml_logic.preprocess_model_class import preprocess_features, 
 from weeds_detector.params import *
 from weeds_detector.utils.padding import expand2square
 
+from weeds_detector.utils.pipeline_mask_unet_api import (
+    prepare_image_for_unet,
+    predict_mask,
+    crop_from_mask_and_save
+)
+from weeds_detector.ml_logic.model_UNET import dice_loss, dice_coeff, combined_loss
+
 from tensorflow import expand_dims
 
+custom_objects = {
+    "compile_metrics": dice_coeff,
+    "loss": combined_loss,
+}
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
-OUTPUT_DIR = "api/outputs/"
+OUTPUT_DIR = "weeds_detector/api/outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
 app.state.model_class = load_model(model_type = 'cnn_classif')
-app.state.model_unet = load_model(model_type = 'unet_segmentation_model')
-
+app.state.model_segm_classif = load_model(model_type = 'cnn_segm_classif_final')
+app.state.model_unet_test = load_model(model_type = 'unet_segmentation_local_model_epoch10', custom_objects=custom_objects)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,31 +53,49 @@ app.add_middleware(
 def root():
     return {"message": "Hello, API is running."}
 
-@app.post("/predict/")
+@app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        # Lire et ouvrir l’image
+        uploaded_image = await file.read()
+        image_pil = Image.open(io.BytesIO(uploaded_image)).convert("RGB")
+        original_size = image_pil.size
+        # Preprocess UNET
+        image_tensor = prepare_image_for_unet(image_pil)
+        mask_bin = predict_mask(app.state.model_unet_test, image_tensor)
 
-        X_processed = preprocess_single_image(image)
+        # Convertir 0/1 en 0/255
+        mask_uint8 = (mask_bin * 255).astype(np.uint8)
 
-        model = app.state.model_class
-        results = model.predict(X_processed)
-        prediction = results[0][0]
+        # Créer une image PIL à partir du masque
+        mask_img = Image.fromarray(mask_uint8)
 
-        if prediction > 0.5:
-            prediction = 1
-        else:
-            prediction = 0
+        # Sauver dans un buffer
+        buffer = io.BytesIO()
+        mask_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        base64_mask = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        # Crops
+        save_dir = "data/croped_images_UNET"
+        unet_bboxs, images_crops = crop_from_mask_and_save(image_pil, mask_bin, original_size, save_dir, file.filename)
+        for unet_bbox, image_crop in zip(unet_bboxs, images_crops):
+            X_processed = preprocess_single_image(image_crop["image_crop"])
+            crop_classif = app.state.model_class.predict(X_processed)
+            unet_bbox["class"] = round(crop_classif[0][0])
 
-        return {'category': float(prediction)}
+
+
+        return {
+            "mask": base64_mask,
+            "predicts": {
+                "unet": unet_bboxs
+                }}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-
-@app.post("/upload/")
+@app.post("/base")
 async def create_upload_file(file: UploadFile = File(...)):
     filename = file.filename  # Ne pas renommer
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -94,14 +122,13 @@ async def create_upload_file(file: UploadFile = File(...)):
 #     contents = await file.read()
 #     image = Image.open(io.BytesIO(contents)).convert("RGB")
 
-#     # Prétraitement
-#     X = preprocess_single_image(image)
+        # Prédiction
+    #     pred = model.predict(X)[0][0]
 
-#     # Prédiction
-#     app.state.model = load_model()
-#     pred = app.state.model.predict(X)[0][0]  # sortie sigmoide entre 0 et 1
+    #     # Seuil de classification
+    #     classe = int(pred > 0.5)
 
-#     # Seuil à 0.5 par défaut pour classer
-#     classe = int(pred > 0.5)
+    #     return {"prediction": classe, "confidence": float(pred)}
 
-#     return {"prediction": classe, "confidence": float(pred)}
+    # except Exception as e:
+    #     return JSONResponse(status_code=500, content={"error": str(e)})

@@ -15,3 +15,4 @@ requests
 matplotlib
 logger
 scikit_image
+python-multipart

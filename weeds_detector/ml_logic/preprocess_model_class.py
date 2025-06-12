@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from io import BytesIO
 import requests
-
+from torchvision import transforms
 from tensorflow.keras.utils import img_to_array
 
 from weeds_detector.utils.padding import expand2square
@@ -56,7 +56,7 @@ def preprocess_features():
     return X_prepro, y
 
 def preprocess_single_image(img: Image.Image) -> np.ndarray:
-    
+
     resized_value = int(RESIZED)
     X_processed = expand2square(img, (0, 0, 0)).resize((resized_value, resized_value))
     X_processed = img_to_array(X_processed)
