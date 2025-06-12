@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi import Query
 
 from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
 from weeds_detector.utils.image_croping import crop_image
