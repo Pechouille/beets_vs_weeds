@@ -1,23 +1,26 @@
+# Imports de bibliothèques standard
 import os
 import io
 import base64
+from contextlib import asynccontextmanager
+
+# Imports de bibliothèques tierces
 from PIL import Image
 import numpy as np
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
-from contextlib import asynccontextmanager
+from tensorflow import expand_dims
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+# Imports locaux
 from weeds_detector.utils.display_bbox import api_display_image_with_bounding_boxes, load_bounding_boxes
 from weeds_detector.utils.image_croping import crop_image
 from weeds_detector.ml_logic.registry import load_model
 from weeds_detector.ml_logic.preprocess_model_class import preprocess_features, preprocess_single_image
-
 from weeds_detector.params import *
 from weeds_detector.utils.padding import expand2square
-
 from weeds_detector.utils.pipeline_mask_unet_api import (
     prepare_image_for_unet,
     predict_mask,
@@ -25,12 +28,11 @@ from weeds_detector.utils.pipeline_mask_unet_api import (
 )
 from weeds_detector.ml_logic.model_UNET import dice_loss, dice_coeff, combined_loss
 
-from tensorflow import expand_dims
-
 custom_objects = {
     "compile_metrics": dice_coeff,
     "loss": combined_loss,
 }
+
 # Dossiers pour stocker les images
 UPLOAD_DIR = "data/all/"
 OUTPUT_DIR = "weeds_detector/api/outputs/"
@@ -51,10 +53,26 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    """
+    Point de terminaison de base pour vérifier si l'API est en cours d'exécution.
+
+    Returns:
+        dict: Un dictionnaire avec un message de bienvenue.
+    """
     return {"message": "Hello, API is running."}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...), model: str = Query(..., enum=["unet", "segm_classif"])):
+    """
+    Prédit les résultats pour une image téléchargée en utilisant le modèle spécifié.
+
+    Args:
+        file (UploadFile): L'image téléchargée.
+        model (str): Le modèle à utiliser pour la prédiction ("unet" ou "segm_classif").
+
+    Returns:
+        dict: Un dictionnaire contenant les résultats de la prédiction.
+    """
     try:
         # Lire et ouvrir l’image
         uploaded_image = await file.read()
@@ -101,7 +119,6 @@ async def predict(file: UploadFile = File(...), model: str = Query(..., enum=["u
                 bbox[1] = (bbox[1]/256) * 1080
                 bbox[3] = (bbox[3]/256) * 1080
             segm_classif_bboxs = []
-
             for class_bbox, segm_bbox in zip(segm_classif_class[0], segm_classif_bbox[0]):
                 segm_classif_bboxs.append({
                     "bbox": segm_bbox.tolist(),
@@ -112,14 +129,21 @@ async def predict(file: UploadFile = File(...), model: str = Query(..., enum=["u
                 "bboxes": segm_classif_bboxs
             }
 
-
         return response
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-
 @app.post("/base")
 async def create_upload_file(file: UploadFile = File(...)):
+    """
+    Télécharge une image et génère une image annotée avec des boîtes englobantes.
+
+    Args:
+        file (UploadFile): L'image téléchargée.
+
+    Returns:
+        FileResponse: L'image annotée avec des boîtes englobantes.
+    """
     filename = file.filename  # Ne pas renommer
     file_path = os.path.join(UPLOAD_DIR, filename)
 
