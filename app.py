@@ -50,8 +50,9 @@ def call_predict_API(model_name:str, uploadedFile:object) -> object:
         response = requests.post(API_URL, params=params, files=files, headers=headers, verify=False)
         image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
         mask_image = Image.open(io.BytesIO(image_bytes))
+        bboxes = json.loads(response.content)["bboxes"]
 
-    return mask_image
+    return mask_image, bboxes
 
 
 st.title("Beets Vs Weeds: Segmentation and classification")
@@ -85,30 +86,27 @@ if uploaded_file is not None:
     #result mask display
     st.text("Predicted mask:")
     with st.spinner("Computing segmentation, please wait...", show_time=True):
-        mask_image = call_predict_API(model_option, uploaded_file)
+        mask_image, bboxes = call_predict_API(model_option, uploaded_file)
     st.image(mask_image, caption=f"Mask predicted from {uploaded_file.name}", use_container_width = True)
 
 ############################################################################
 ### Compute the result against the original image ###########################
-
-    #display the original file with the bounding bow generated from the mask
-    with st.spinner("Computing bounding boxes from mask...", show_time=True):
-        image_binary = np.asarray(PIL.Image.open(os.path.join("./static/",  pred_selector[uploaded_file.name])))
-        bounding_boxes = get_bbox_from_mask(image_binary, resized_size=(1920,1080), original_size=(1920,1080))
 
     #create the temp file
     with st.spinner("Applying mask to original picture...", show_time=True):
         bb_original = PIL.Image.open(uploaded_file)
         bb_original.save(TEMP_STATIC_IMAGE)
         bb_original = PIL.Image.open(TEMP_STATIC_IMAGE).convert("RGBA")
-        for bbox in bounding_boxes:
-            if len(bbox) < 4:
-                st.title(f"ERROR: expected len of bbox=4 but was {len(bbox)}, {bbox}")
-                break
-
+        for bbox in bboxes:
+            inner_bbox = bbox['bbox']
+            class_bb = int(bbox['class'])
+            if class_bb == 0:
+                color = (0,255,0,60)
+            else :
+                color = (255,0,0,60)
             bbbox_mask = Image.new('RGBA', bb_original.size, (0,0,0,0))
             draw = ImageDraw.Draw(bbbox_mask)
-            draw.rectangle((bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]), fill=(0, 0, 255,60))
+            draw.rectangle((inner_bbox[0], inner_bbox[1], inner_bbox[0] + inner_bbox[2], inner_bbox[1] + inner_bbox[3]), fill=color)
             bb_original = Image.alpha_composite(bb_original, bbbox_mask)
 
         bb_original.save(TEMP_STATIC_IMAGE)
