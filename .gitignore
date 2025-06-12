@@ -197,5 +197,5 @@ data/
 *.h5
 
 #image
-./static/temp.png
 !Beets_VS_Weeds.png
+static/*.png

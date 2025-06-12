@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from io import BytesIO
 import requests
-from torchvision import transforms
 from tensorflow.keras.utils import img_to_array
 
 from weeds_detector.utils.padding import expand2square
@@ -15,7 +14,6 @@ from google.cloud import storage
 from tensorflow import expand_dims
 
 from weeds_detector.ml_logic.preprocess_model_segm_class import create_folder, transform_image
-from weeds_detector.utils.images import save_image
 
 
 def preprocess_features():
