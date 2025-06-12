@@ -41,7 +41,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 app = FastAPI()
 app.state.model_class = load_model(model_type = 'cnn_classif')
 app.state.model_segm_classif = load_model(model_type = 'cnn_segm_classif_final2')
-app.state.model_unet_test = load_model(model_type = 'unet_segmentation_local_model_epoch10', custom_objects=custom_objects)
+app.state.model_unet_test = load_model(model_type = 'unet_segmentation_model', custom_objects=custom_objects)
 
 app.add_middleware(
     CORSMiddleware,
@@ -120,9 +120,10 @@ async def predict(file: UploadFile = File(...), model: str = Query(..., enum=["u
                 bbox[3] = (bbox[3]/256) * 1080
             segm_classif_bboxs = []
             for class_bbox, segm_bbox in zip(segm_classif_class[0], segm_classif_bbox[0]):
+                x, y, w, h = segm_bbox
                 segm_classif_bboxs.append({
-                    "bbox": segm_bbox.tolist(),
-                    "class": round(class_bbox[0])
+                "bbox": [float(x), float(y), float(x + w), float(y + h)],
+                "class": int(round(class_bbox[0]))
                 })
 
             response = {
