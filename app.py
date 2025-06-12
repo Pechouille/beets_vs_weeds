@@ -94,6 +94,7 @@ if uploaded_file is not None:
     with st.spinner("Computing segmentation and classification, please wait...", show_time=True):
         mask_image, bboxes = call_predict_API(front_end_label_to_model_selection[model_option], uploaded_file)
     if mask_image != None:
+        mask_image = mask_image.resize(image.size)
         st.image(mask_image, caption=f"Mask predicted from {uploaded_file.name}", use_container_width = True)
 
 ############################################################################
