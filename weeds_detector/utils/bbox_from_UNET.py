@@ -8,6 +8,7 @@ from skimage.measure import label, regionprops, find_contours
 import os
 from PIL import Image
 from weeds_detector.data import get_all_files_path_and_name_in_directory, get_filepath
+from weeds_detector.utils.images import save_image
 import requests
 from io import BytesIO
 
@@ -84,7 +85,17 @@ def get_bbox_from_mask(y_pred_binary, resized_size=(256, 256), original_size=(19
 
 def predict_all_images(model, image_folder):
     """
-    Predict bounding boxes for all .png images in a folder (GCP or local)
+    Predict bounding boxes for all .png images in a folder (GCP or local).
+
+    Returns:
+        dict: {
+            "image_filename.png": [
+                {"bbox_id": 0, "bbox": [xmin, ymin, xmax, ymax], "class": ""},
+                {"bbox_id": 1, "bbox": [...], "class": ""},
+                ...
+            ],
+            ...
+        }
     """
     image_paths_info = get_all_files_path_and_name_in_directory(image_folder, extensions=[".png"])
     if image_paths_info is None:
@@ -95,16 +106,24 @@ def predict_all_images(model, image_folder):
         image = process_test_image(image_path)
         mask_bin = prediction_mask_image(model, image)
         bboxes = get_bbox_from_mask(mask_bin)
-        results[filename] = bboxes
+
+        results[filename] = []
+        for idx, bbox in enumerate(bboxes):
+            results[filename].append({
+                "bbox_id": idx,
+                "bbox": bbox,
+                "class": ""  # à remplir plus tard
+            })
 
     return results
 
-def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
+def crop_images_from_result(results: dict, image_dir: str):
     """
-    Crops and saves sub-images from original full-resolution images (GCP or local).
+    Crop and save sub-images from original full-resolution images,
+    either locally or to GCP, depending on FILE_TARGET.
     """
-    os.makedirs(output_dir, exist_ok=True)
     crop_id = 0
+    folder_name = f"data/croped_images_UNET/"
 
     for filename, bboxes in results.items():
         full_image_path = get_filepath(os.path.join(image_dir, filename))
@@ -113,7 +132,6 @@ def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
             print(f"❌ Image not found: {filename}")
             continue
 
-        # Load image either from GCP public URL or local path
         try:
             if full_image_path.startswith("http"):
                 response = requests.get(full_image_path)
@@ -124,14 +142,18 @@ def crop_images_from_result(results: dict, image_dir: str, output_dir: str):
             print(f"⚠️ Error opening image {filename}: {e}")
             continue
 
-        for i, bbox in enumerate(bboxes):
-            x, y, w, h = map(int, bbox)
-            crop = image.crop((x, y, x + w, y + h))
+        for bbox_dict in bboxes:
+            bbox = bbox_dict['bbox']
+            # bbox = [xmin, ymin, xmax, ymax]
+            xmin, ymin, xmax, ymax = map(int, bbox)
+            width = xmax - xmin
+            height = ymax - ymin
 
-            crop_filename = f"{os.path.splitext(filename)[0]}_crop_{i}.png"
-            crop_path = os.path.join(output_dir, crop_filename)
+            crop = image.crop((xmin, ymin, xmax, ymax))
 
-            crop.save(crop_path)
+            crop_filename = f"{os.path.splitext(filename)[0]}_crop_{bbox_dict['bbox_id']}.png"
+            save_image(crop, folder_name, crop_filename)
+
             crop_id += 1
 
-    print(f"✅ {crop_id} crops saved in {output_dir}")
+    print(f"✅ {crop_id} crops saved at {folder_name}")

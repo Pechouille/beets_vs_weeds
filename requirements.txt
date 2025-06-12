@@ -12,3 +12,4 @@ uvicorn
 matplotlib
 logger
 python-multipart
+scikit-image
