@@ -57,7 +57,6 @@ def crop_from_mask_and_save(pil_image: Image.Image, mask_binary: np.ndarray,
         save_image(crop, save_dir, crop_filename)
 
         results.append({
-            "bbox_id": i,
             "bbox": [xmin, ymin, xmax, ymax],
             "class": ""  # à remplir plus tard si besoin
         })
