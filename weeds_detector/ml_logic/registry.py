@@ -5,9 +5,6 @@ from tensorflow import keras
 from google.cloud import storage
 from colorama import Fore, Style
 from glob import glob
-import requests
-
-
 
 def save_model(model: keras.Model, model_type: str) -> None:
     """
@@ -39,41 +36,39 @@ def save_model(model: keras.Model, model_type: str) -> None:
 
 
 def load_model(model_type: str, custom_objects=None):
-        if MODEL_TARGET == "local":
-            print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
-            # Get the latest model version name by the timestamp on disk
-            local_model_directory = os.path.join(LOCAL_REGISTRY_PATH, "models")
-            local_model_paths = glob.glob(f"{local_model_directory}/{model_type}_*")
+    if MODEL_TARGET == "local":
+        print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
+        # Get the latest model version name by the timestamp on disk
+        local_model_directory = os.path.join(LOCAL_REGISTRY_PATH, "models")
+        local_model_paths = glob.glob(f"{local_model_directory}/{model_type}_*")
 
-            if not local_model_paths:
-                return None
+        if not local_model_paths:
+            return None
 
-            most_recent_model_path_on_disk = sorted(local_model_paths)[-1]
+        most_recent_model_path_on_disk = sorted(local_model_paths)[-1]
 
-            print(Fore.BLUE + f"\nLoad latest model from disk..." + Style.RESET_ALL)
+        print(Fore.BLUE + f"\nLoad latest model from disk..." + Style.RESET_ALL)
 
-            latest_model = keras.models.load_model(most_recent_model_path_on_disk)
+        latest_model = keras.models.load_model(most_recent_model_path_on_disk)
 
-            print("✅ Model loaded from local disk")
+        print("✅ Model loaded from local disk")
 
-            return latest_model
+        return latest_model
 
-        elif MODEL_TARGET == "gcs":
+    elif MODEL_TARGET == "gcs":
+        print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
+        client = storage.Client()
+        blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix=f"models/{model_type}_"))
 
-            print(Fore.BLUE + f"\nLoad latest model from GCS..." + Style.RESET_ALL)
+        latest_blob = max(blobs, key=lambda x: x.updated)
+        latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
+        os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
+        latest_blob.download_to_filename(latest_model_path_to_save)
+        if custom_objects == None:
+            latest_model = keras.models.load_model(latest_model_path_to_save)
+        else:
+            latest_model = keras.models.load_model(latest_model_path_to_save, custom_objects=custom_objects, compile=False)
 
-            client = storage.Client()
-            blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix=f"models/{model_type}_"))
+        print("✅ Latest model downloaded from cloud storage")
 
-            latest_blob = max(blobs, key=lambda x: x.updated)
-            latest_model_path_to_save = os.path.join(LOCAL_REGISTRY_PATH, latest_blob.name)
-            os.makedirs(os.path.dirname(latest_model_path_to_save), exist_ok=True)
-            latest_blob.download_to_filename(latest_model_path_to_save)
-            if custom_objects == None:
-                latest_model = keras.models.load_model(latest_model_path_to_save)
-            else:
-                latest_model = keras.models.load_model(latest_model_path_to_save, custom_objects=custom_objects, compile=False)
-
-            print("✅ Latest model downloaded from cloud storage")
-
-            return latest_model
+        return latest_model
