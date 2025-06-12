@@ -197,4 +197,4 @@ data/
 *.h5
 
 #image
-./static/temp.png
+static/temp.png
