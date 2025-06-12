@@ -25,7 +25,7 @@ pred_selector = {
 }
 
 TEMP_STATIC_IMAGE = "./static/temp.png"
-API_URL = "https://beets-vs-weeds-api-prod-zpq6nq7z5q-od.a.run.app"
+API_URL = "https://beets-vs-weeds-api-prod-zpq6nq7z5q-od.a.run.app/predict"
 
 def call_predict_API(model_name:str, uploadedFile:object) -> object:
     '''Simulate the call to the UNET segmentation computing API'''
