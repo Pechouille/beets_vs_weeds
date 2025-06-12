@@ -40,10 +40,14 @@ def call_predict_API(model_name:str, uploadedFile:object) -> object:
             "accept": "application/json"
         }
 
-        files = {
-            "file": ("bbro_bbro_07_05_2021_v_0_3.png", open("./data/test/bbro_bbro_07_05_2021_v_0_3.png", "rb"), "image/png")
+        params = {
+            "model":"unet"
         }
-        response = requests.post(API_URL, files=files, headers=headers, verify=False)
+
+        files = {
+            "file": (uploadedFile.name, uploaded_file.getvalue(), "image/png")
+        }
+        response = requests.post(API_URL, params=params, files=files, headers=headers, verify=False)
         image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
         mask_image = Image.open(io.BytesIO(image_bytes))
 
