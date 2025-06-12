@@ -41,15 +41,16 @@ def call_predict_API(model_name:str, uploadedFile:object) -> object:
         }
 
         params = {
-            "model":"unet"
+            "model":model_name
         }
 
         files = {
             "file": (uploadedFile.name, uploaded_file.getvalue(), "image/png")
         }
         response = requests.post(API_URL, params=params, files=files, headers=headers, verify=False)
-        image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
-        mask_image = Image.open(io.BytesIO(image_bytes))
+        if "mask" in json.loads(response.content).keys():
+            image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
+            mask_image = Image.open(io.BytesIO(image_bytes))
         bboxes = json.loads(response.content)["bboxes"]
 
     return mask_image, bboxes
@@ -59,8 +60,13 @@ st.title("Beets Vs Weeds: Segmentation and classification")
 
 ############################################################################
 ### Model selection ########################################################
-MODEL_ALL_IN_ONE = "Segmentation and classification all in one"
-MODEL_SEPARATED = "Segmentation then classification"
+MODEL_ALL_IN_ONE = "Convolution Neural Network only (CNN)"
+MODEL_SEPARATED = "Segmentation UNET + Classification CNN"
+
+front_end_label_to_model_selection = {
+    MODEL_ALL_IN_ONE: "segm_classif",
+    MODEL_SEPARATED: "unet"
+}
 
 model_option = st.selectbox(
     "Please select a model to use",
@@ -71,7 +77,7 @@ st.write("You selected:", model_option)
 
 ############################################################################
 ### Image file selection ####################################################
-uploaded_file = st.file_uploader("Choisissez une image...", type=["png"])
+uploaded_file = st.file_uploader("Select an image...", type=["png"])
 
 # 📸 Affichage de l'image
 if uploaded_file is not None:
@@ -85,9 +91,10 @@ if uploaded_file is not None:
 
     #result mask display
     st.text("Predicted mask:")
-    with st.spinner("Computing segmentation, please wait...", show_time=True):
-        mask_image, bboxes = call_predict_API(model_option, uploaded_file)
-    st.image(mask_image, caption=f"Mask predicted from {uploaded_file.name}", use_container_width = True)
+    with st.spinner("Computing segmentation and classification, please wait...", show_time=True):
+        mask_image, bboxes = call_predict_API(front_end_label_to_model_selection[model_option], uploaded_file)
+    if mask_image != None:
+        st.image(mask_image, caption=f"Mask predicted from {uploaded_file.name}", use_container_width = True)
 
 ############################################################################
 ### Compute the result against the original image ###########################
@@ -106,7 +113,7 @@ if uploaded_file is not None:
                 color = (255,0,0,60)
             bbbox_mask = Image.new('RGBA', bb_original.size, (0,0,0,0))
             draw = ImageDraw.Draw(bbbox_mask)
-            draw.rectangle((inner_bbox[0], inner_bbox[1], inner_bbox[0] + inner_bbox[2], inner_bbox[1] + inner_bbox[3]), fill=color)
+            draw.rectangle((inner_bbox[0], inner_bbox[1], inner_bbox[2], inner_bbox[3]), fill=color)
             bb_original = Image.alpha_composite(bb_original, bbbox_mask)
 
         bb_original.save(TEMP_STATIC_IMAGE)
