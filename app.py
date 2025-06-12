@@ -9,20 +9,8 @@ import requests
 import json
 import base64
 import io
-
-DUMMY_MODE = False
-
-
 import streamlit as st
 from PIL import Image
-
-pred_selector = {
-    "near30_near30_01_06_2021_v_0_8.png": "y_pred0.png",
-    "near30_near30_01_06_2021_v_1_2.png" : "y_pred1.png",
-    "near30_near30_01_06_2021_v_1_43.png" : "y_pred2.png",
-    "near30_near30_01_06_2021_v_2_65.png" : "y_pred3.png",
-    "near30_near30_01_06_2021_v_2_66.png" : "y_pred4.png"
-}
 
 TEMP_STATIC_IMAGE = "./static/temp.png"
 API_URL = "https://beets-vs-weeds-api-prod-zpq6nq7z5q-od.a.run.app/predict"
@@ -31,27 +19,22 @@ def call_predict_API(model_name:str, uploadedFile:object) -> object:
     '''Simulate the call to the UNET segmentation computing API'''
     mask_image = None
 
-    if DUMMY_MODE:
-        time.sleep(10) # place for the UNET predict
-        mask_image_name = pred_selector[uploadedFile.name]
-        mask_image = Image.open(os.path.join("./static/", mask_image_name))
-    else:
-        headers = {
-            "accept": "application/json"
-        }
+    headers = {
+        "accept": "application/json"
+    }
 
-        params = {
-            "model":model_name
-        }
+    params = {
+        "model":model_name
+    }
 
-        files = {
-            "file": (uploadedFile.name, uploaded_file.getvalue(), "image/png")
-        }
-        response = requests.post(API_URL, params=params, files=files, headers=headers, verify=False)
-        if "mask" in json.loads(response.content).keys():
-            image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
-            mask_image = Image.open(io.BytesIO(image_bytes))
-        bboxes = json.loads(response.content)["bboxes"]
+    files = {
+        "file": (uploadedFile.name, uploaded_file.getvalue(), "image/png")
+    }
+    response = requests.post(API_URL, params=params, files=files, headers=headers, verify=False)
+    if "mask" in json.loads(response.content).keys():
+        image_bytes  = base64.b64decode(json.loads(response.content)["mask"])
+        mask_image = Image.open(io.BytesIO(image_bytes))
+    bboxes = json.loads(response.content)["bboxes"]
 
     return mask_image, bboxes
 
