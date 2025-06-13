@@ -38,9 +38,92 @@ def call_predict_API(model_name:str, uploadedFile:object) -> object:
 
     return mask_image, bboxes
 
+st.markdown(
+    """
+    <h1 style='
+        text-align: center;
+        color: white;
+        font-size: 4em;
+        margin-top: 4rem;
+    '>
+        Beets Vs Weeds: Segmentation and classification
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
 
-st.title("Beets Vs Weeds: Segmentation and classification")
+#https://plantura.garden/uk/wp-content/uploads/sites/2/2022/08/beetroot-in-ground.jpg
+#https://www.suedzucker.com/wp-content/uploads/2021/11/sugar_beet_field.jpg
 
+
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-image: url("https://www.suedzucker.com/wp-content/uploads/2021/11/sugar_beet_field.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+
+    /* Optional: add a subtle dark overlay for better contrast */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.4);  /* adjust opacity */
+        z-index: -1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+st.markdown(
+    """
+    <style>
+    /* Titre principal */
+    h1 {
+        color: white !important;
+    }
+    p {
+    color: white !important;
+    }
+
+    /* Labels du selectbox et file uploader */
+    label {
+        color: white !important;
+    }
+
+    /* Paragraphes de st.write */
+    .stMarkdown p {
+        color: white !important;
+    }
+
+    /* Fond global si besoin */
+    .main {
+        background-color: #0e1117;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+st.markdown(
+    """
+    <style>
+    /* Réduire ou augmenter la largeur du conteneur principal */
+    .block-container {
+        max-width: 1200px;  /* Tu peux mettre 1000px, 80%, etc. */
+        margin: 0 auto;     /* Centrer horizontalement */
+        padding: 2rem;      /* Espace autour */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 ############################################################################
 ### Model selection ########################################################
 MODEL_ALL_IN_ONE = "Convolution Neural Network only (CNN)"
@@ -51,12 +134,19 @@ front_end_label_to_model_selection = {
     MODEL_SEPARATED: "unet"
 }
 
+st.markdown(
+    "<p style='color: white; font-size: 2em;'>Please select a model to use</p>",
+    unsafe_allow_html=True
+)
 model_option = st.selectbox(
-    "Please select a model to use",
+    "",  # Pas de label ici, car on l’a déjà mis au-dessus
     (MODEL_ALL_IN_ONE, MODEL_SEPARATED),
 )
 
-st.write("You selected:", model_option)
+st.markdown(
+    f"<p style='color: white; font-size: 1.2em;'>You selected: <strong>{model_option}</strong></p>",
+    unsafe_allow_html=True
+)
 
 ############################################################################
 ### Image file selection ####################################################
@@ -73,7 +163,7 @@ if uploaded_file is not None:
 ### Segmentation prediction on the image ###################################
 
     #result mask display
-    st.text("Predicted mask:")
+    st.markdown('<p style="color: white; font-size: 1.2em;">Predicted mask:</p>', unsafe_allow_html=True)
     with st.spinner("Computing segmentation and classification, please wait...", show_time=True):
         mask_image, bboxes = call_predict_API(front_end_label_to_model_selection[model_option], uploaded_file)
     if mask_image != None:
@@ -102,6 +192,6 @@ if uploaded_file is not None:
 
         bb_original.save(TEMP_STATIC_IMAGE)
 
-    st.text("Bounding box on original picture:")
+    st.markdown('<p style="color:white; font-size: 1.2em;">Bounding box on original picture:</p>', unsafe_allow_html=True)
     st.image(TEMP_STATIC_IMAGE, caption=f"Bounding box from {uploaded_file.name}", use_container_width = True)
     ############################################################################
